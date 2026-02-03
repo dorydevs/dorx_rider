@@ -2,6 +2,7 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import axiosInstance from "@/utils/axiosInstance";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useIsFocused } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -13,7 +14,6 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-
 type Booking = any;
 
 export default function ClientScreen() {
@@ -22,7 +22,7 @@ export default function ClientScreen() {
   const [clientData, setclientData] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  const isFocused = useIsFocused();
   const dispatch = useAppDispatch();
   const user = useAppSelector((state: any) => state.user.user);
   const [userData, setUserData] = useState<any>(null);
@@ -47,27 +47,29 @@ export default function ClientScreen() {
   }, [user]);
 
   useEffect(() => {
-    if (userData !== null) {
-      const fetchclientData = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-          const response = await axiosInstance(userData.token).get(
-            `/api/riderTransaction/clientBookings?hubCity=${userData?.storeCity}&riderId=${userData?.id}`
-          );
+    if (isFocused) {
+      if (userData !== null) {
+        const fetchclientData = async () => {
+          setLoading(true);
+          setError(null);
+          try {
+            const response = await axiosInstance(userData.token).get(
+              `/api/riderTransaction/clientBookings?hubCity=${userData?.storeCity}&riderId=${userData?.id}`,
+            );
+            console.log(">>>>>>>>> ", response.data.result);
+            setclientData(response.data.result);
+          } catch (err: any) {
+            console.error("Failed to load client clientData:", err);
+            setError(err?.message ?? "Failed to load clientData");
+          } finally {
+            setLoading(false);
+          }
+        };
 
-          setclientData(response.data.result);
-        } catch (err: any) {
-          console.error("Failed to load client clientData:", err);
-          setError(err?.message ?? "Failed to load clientData");
-        } finally {
-          setLoading(false);
-        }
-      };
-
-      fetchclientData();
+        fetchclientData();
+      }
     }
-  }, [userData]);
+  }, [userData, isFocused]);
 
   const handlePress = (item: Booking) => {
     router.push({
@@ -90,9 +92,10 @@ export default function ClientScreen() {
         activeOpacity={0.75}
       >
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 16 }}>{title}</Text>
+          <Text style={{ fontSize: 16 }}>{item.clientName}</Text>
+
           <Text style={{ opacity: 0.5, fontSize: 13 }} numberOfLines={2}>
-            {subtitle || JSON.stringify(item).slice(0, 80)}
+            {item.address}
           </Text>
         </View>
       </TouchableOpacity>

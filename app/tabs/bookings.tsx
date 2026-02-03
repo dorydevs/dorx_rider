@@ -34,6 +34,14 @@ const cards = [
   },
   {
     id: 4,
+    title: "RTS/Hub (scanner)",
+    description: "Received RTS from Hub",
+    icon: "home",
+    color: "#ff5e00",
+    route: "/bookings/rtsFromHub",
+  },
+  {
+    id: 4,
     title: "RTS/Incoming (scanner)",
     description: "Incoming RTS from Customers",
     icon: "barcode",
@@ -61,23 +69,28 @@ export default function BookingsScreen() {
     <View style={styles.container}>
       <ScrollView style={styles.cardsContainer}>
         {cards.map((card) => (
-          <View>
+          <View style={{ marginBottom: 10 }}>
             <TouchableOpacity
               key={card.id}
               style={[styles.card, { borderLeftColor: card.color }]}
               onPress={() => handleCardPress(card)}
               activeOpacity={0.7}
             >
-              <FontAwesome
-                name={card.icon as any}
-                size={28}
-                color={card.color}
-                style={styles.icon}
-              />
-              <Text style={styles.cardTitle}>{card.title}</Text>
-              <Text style={styles.cardDescription}>{card.description}</Text>
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 20 }}
+              >
+                <FontAwesome
+                  name={card.icon as any}
+                  size={22}
+                  color={card.color}
+                  style={styles.icon}
+                />
+                <View>
+                  <Text style={styles.cardTitle}>{card.title}</Text>
+                  <Text style={styles.cardDescription}>{card.description}</Text>
+                </View>
+              </View>
             </TouchableOpacity>
-            <View></View>
           </View>
         ))}
       </ScrollView>
@@ -89,6 +102,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
+    marginTop: 10,
   },
   title: {
     fontSize: 24,
@@ -106,15 +120,16 @@ const styles = StyleSheet.create({
     backgroundColor: "#f0f0f0",
     borderLeftWidth: 4,
     borderLeftColor: "#007AFF",
+    elevation: 0.5,
   },
   cardTitle: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: "600",
     marginBottom: 2,
     marginTop: 5,
   },
   cardDescription: {
-    fontSize: 14,
+    fontSize: 13,
     opacity: 0.7,
   },
 });

@@ -91,7 +91,7 @@ export default function scanClientScheduledParcel() {
       params: {
         clientData: JSON.stringify(client),
         clientScheduledToPickUpData: JSON.stringify(
-          clientScheduledToPickUpData
+          clientScheduledToPickUpData,
         ),
         ScheduledData: JSON.stringify(ScheduledData),
       },
@@ -106,10 +106,10 @@ export default function scanClientScheduledParcel() {
           `/api/orderTransactions/fetchOrdersForPickupByHub?clientId=${
             client?.clientId
           }&&pickupAddressId=${parseFloat(
-            clientScheduledToPickUpData?.pickupAddressId
+            clientScheduledToPickUpData?.pickupAddressId,
           )}&&pickupSchedule=${moment(clientScheduledToPickUpData?.date).format(
-            "YYYY-MM-DD"
-          )}`
+            "YYYY-MM-DD",
+          )}`,
         );
         console.log(
           `/api/orderTransactions/fetchOrdersForPickupByHub?clientId=${
@@ -117,8 +117,8 @@ export default function scanClientScheduledParcel() {
           }&&pickupAddressId=${
             clientScheduledToPickUpData?.pickupAddressId
           }&&pickupSchedule=${moment(clientScheduledToPickUpData?.date).format(
-            "YYYY-MM-DD"
-          )}`
+            "YYYY-MM-DD",
+          )}`,
         );
 
         setScheduledData(response.data);

@@ -8,7 +8,7 @@ import { useRouter } from "expo-router";
 import moment from "moment";
 import { useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-export default function CustomersScreen() {
+export default function HubScreen() {
   const router = useRouter();
   const { playSuccess, playError, playWarning } = useScannerSounds();
   const [data, setData] = useState<string>("");
@@ -43,7 +43,7 @@ export default function CustomersScreen() {
           // waybill status should be != 'In transit'
           // hub transaction origin must be 'Provincial Office'
           const orderDetail = await axiosInstance(userData.token).get(
-            `/api/orderTransactions/fetchOrderTransactionByOrderNumber?orderNumber=${data}&hubTransactionOriginProvince=${true}`
+            `/api/orderTransactions/fetchOrderTransactionByOrderNumber?orderNumber=${data.data}&hubTransactionOriginProvince=${true}`,
           );
 
           if (
@@ -52,7 +52,7 @@ export default function CustomersScreen() {
             orderDetail.data?.hubTransaction.origin === "Provincial Office"
           ) {
             const scanPayload = {
-              orderNumber: data,
+              orderNumber: data.data,
               status: "Picked up by rider from hub",
             };
             const transactionPayload = {
@@ -66,12 +66,12 @@ export default function CustomersScreen() {
             // create rider transaction
             await axiosInstance(userData.token).post(
               `/api/riderTransaction`,
-              transactionPayload
+              transactionPayload,
             );
             // update order status
             const scanResponse = await axiosInstance(userData.token).put(
               `/api/orderTransactions/scanWaybill`,
-              scanPayload
+              scanPayload,
             );
 
             setScannedData((prev) => [...prev, data]);
@@ -80,20 +80,29 @@ export default function CustomersScreen() {
             setAlertColor("blue");
             setScanned(false);
           } else {
-            setScanResultMessage("Invalid");
+            console.log("NATAWAG? ");
+            setScanResultMessage(
+              `INVALID \n Item Status : ${orderDetail.data.waybillStatus}`,
+            );
             setBarangayDestination("");
             setAlertColor("red");
             playError();
             setScanned(false);
           }
           setLoadingScan(false);
-        } catch (error) {
+        } catch (error: any) {
           setLoadingScan(false);
-          console.log("RIDER SCANNING ERROR:", error);
+          console.log("RIDER HUB SCANNING ERROR:", error);
           playError();
           setAlertColor("red");
-          setScanResultMessage("Invalid");
+          setScanResultMessage(`INVALID ${error}`);
           setScanned(false);
+        } finally {
+          setLoadingScan(false);
+          setTimeout(() => {
+            setScanned(false);
+            setData("");
+          }, 2000);
         }
       } else {
         setScanResultMessage("Already Scanned!");
@@ -101,6 +110,10 @@ export default function CustomersScreen() {
         setScanned(false);
         setLoadingScan(false);
         playError();
+        setTimeout(() => {
+          setScanned(false);
+          setData("");
+        }, 2000);
       }
     }
     if (userData !== null) {
@@ -154,8 +167,8 @@ export default function CustomersScreen() {
           {loadingScan
             ? "Processing..."
             : scanned
-            ? "Camera Locked"
-            : "Ready to Scan"}
+              ? "Camera Locked"
+              : "Ready to Scan"}
         </Text>
       </View>
       {scanResultMessage && (

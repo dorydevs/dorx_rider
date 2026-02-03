@@ -5,14 +5,13 @@ import axiosInstance from "@/utils/axiosInstance";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import moment from "moment";
 import { useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-export default function RTSIncomingScreen() {
+export default function RTSReturnToClientScreen() {
   const router = useRouter();
 
   const { playSuccess, playError, playWarning } = useScannerSounds();
-  const [data, setData] = useState<string>("");
+  const [data, setData] = useState<any>("");
   const [scanned, setScanned] = useState(false);
   const user = useAppSelector((state: any) => state.user.user);
   const [userData, setUserData] = useState<any>(null);
@@ -20,9 +19,9 @@ export default function RTSIncomingScreen() {
   const [scanResultMessage, setScanResultMessage] = useState("");
   const [scannedData, setScannedData] = useState<string[]>([]);
   const [alertColor, setAlertColor] = useState("blue");
-  const [totalScannedCount, setTotalScannedCount] = useState(0);
+  const [returned, setReturned] = useState(false);
 
-  const onScan = async (scannedCode: string) => {
+  const onScan = async (scannedCode: any) => {
     if (scanned) return;
     setScanResultMessage("");
     setScanned(true);
@@ -54,64 +53,89 @@ export default function RTSIncomingScreen() {
         if (!scannedData.includes(data)) {
           setLoadingScan(true);
 
+          // validations to consider
+          // waybill status = 'for return'
+          // rts status = 'Received by hub'
+          // hub city must be same as the sender city
+
           // scan waybill
           try {
-            // validation: allow scanning only if recipient city is the same as the hub city and waybill status is "for return"
-            const validationResponse = await axiosInstance(userData.token).get(
-              `/api/orderTransactions/fetchOrderTransactionByOrderNumber?orderNumber=${data}`
+            const orderDetail = await axiosInstance(userData.token).get(
+              `/api/orderTransactions/fetchOrderTransactionByOrderNumber?orderNumber=${data.data}&satelliteOperatorID=${true}`,
             );
+            console.log("waybillStatus", orderDetail.data.waybillStatus);
+            console.log("rtsStatus", orderDetail.data.rtsStatus);
+            console.log("senderCity", orderDetail.data.senderCity);
+            console.log(" userData.hubCity ", userData.hubCity);
 
-            if (
-              validationResponse.data.waybillStatus === "For Return" &&
-              validationResponse.data.receiverCity === userData.barangay
-            ) {
-              const riderRtsItemPayload = {
-                scannedDate: moment().format("YYYY-MM-DD hh:mm:ss"),
-                origin: "Client",
-                operationAccountId: userData.id,
-                recipientDetailId: validationResponse.data.recipientDetailId,
-                orderTransactionId: validationResponse.data.orderTransactionId,
-                orderNumber: data,
-              };
+            try {
+              // await axiosInstance(userData.token).put(
+              //   `/api/orderTransactions/updateWaybillStatus`,
+              //   {
+              //     orderTransactionId: orderDetail.data.orderTransactionId,
+              //     waybillStatus: "For Return",
 
-              playSuccess();
-              // create rider to satellite operator return transaction
+              //   },
+              // );
+
               await axiosInstance(userData.token).post(
-                `/api/rts-item-customer`,
-                riderRtsItemPayload
+                `/api/orderTransactions/createReturnTransaction`,
+                {
+                  orderTransactionId: orderDetail.data.orderTransactionId,
+                  rider_id: userData.id,
+                },
               );
 
-              setTotalScannedCount((prev) => prev + 1);
-
               setScannedData((prev) => [...prev, data]);
-              setScanResultMessage("Successfully Scanned!");
-              setAlertColor("blue");
+              setScanResultMessage("Item Successfully Scanned");
+              setReturned(true);
+              setAlertColor("green");
+              setScanned(false);
+              playSuccess();
               setLoadingScan(false);
-            } else {
-              setLoadingScan(false);
+            } catch (error) {
               setScanResultMessage("Invalid.");
+              setReturned(false);
               setAlertColor("red");
               playError();
-            }
-            setLoadingScan(false);
-          } catch (error: any) {
-            if (error.response) {
-              setScanResultMessage(error.response.data.message);
-              setAlertColor("red");
+              setScanResultMessage("");
+              setScanned(false);
               setLoadingScan(false);
             }
+
+            // stop();
+          } catch (error) {
+            // alert(error);
+            console.log("RIDER RTS RETURN SCANNING ERROR:", error);
             playError();
+            setScanResultMessage("");
+            setScanned(false);
+            setLoadingScan(false);
+          } finally {
+            setLoadingScan(false);
+            setTimeout(() => {
+              setScanned(false);
+              setData("");
+            }, 2000);
           }
         } else {
           setScanResultMessage("Already Scanned!");
           setAlertColor("yellow");
+          playWarning();
+          setScanResultMessage("");
+          setScanned(false);
+          setLoadingScan(false);
+          setTimeout(() => {
+            setScanned(false);
+            setData("");
+          }, 2000);
         }
       }
     }
     if (userData !== null) {
       processScan();
     }
-  }, [data]);
+  }, [data, userData]);
 
   return (
     <View style={styles.container}>
@@ -122,7 +146,7 @@ export default function RTSIncomingScreen() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <FontAwesome name="chevron-left" size={24} color="#3f6e6c" />
+          <FontAwesome name="chevron-left" size={24} color="#FF3B30" />
         </TouchableOpacity>
 
         <Text style={styles.title}>RTS/Incomming</Text>
@@ -140,8 +164,8 @@ export default function RTSIncomingScreen() {
           {loadingScan
             ? "Processing..."
             : scanned
-            ? "Camera Locked"
-            : "Ready to Scan"}
+              ? "Camera Locked"
+              : "Ready to Scan"}
         </Text>
       </View>
       {scanResultMessage && (
@@ -150,7 +174,7 @@ export default function RTSIncomingScreen() {
             textAlign: "center",
             fontWeight: "bold",
             fontSize: 17,
-            color: "red",
+            color: alertColor,
           }}
         >
           {scanResultMessage}
@@ -175,7 +199,7 @@ const styles = StyleSheet.create({
     fontSize: 25,
     fontWeight: "bold",
     marginBottom: 8,
-    color: "#FF9500",
+    color: "tomato",
   },
   subtitle: {
     fontSize: 16,

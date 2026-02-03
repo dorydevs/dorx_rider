@@ -9,7 +9,7 @@ const axiosInstance = (token?: string) => {
   }
 
   return axios.create({
-    baseURL: "https://dorxbackend-production.up.railway.app",
+    baseURL: "http://192.168.1.64:9001",
     headers,
   });
 };

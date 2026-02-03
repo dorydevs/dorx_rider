@@ -25,37 +25,7 @@ export default function RTSIncomingScreen() {
   const [loadingScan, setLoadingScan] = useState(false);
   const [scanResultMessage, setScanResultMessage] = useState("");
   // const [waybillDetails, setWaybillDetails] = useState<any>([]);
-  const [waybillDetails, setWaybillDetails] = useState<any>({
-    itemName: "Mobile Phone",
-    itemWeight: "1.5 kg",
-    numberOfItem: 1,
-    codValue: 1200,
-    codFee: 50,
-    itemValue: 1000,
-    valuationFee: 30,
-    receivableFreight: 150,
-    totalShippingCost: 230,
-    pouchesSize: "Medium",
-    remarks: "Handle with care",
-
-    waybillNumber: "WB-123456789",
-    orderNumber: "ORD-987654321",
-    orderStatus: "Picked Up",
-
-    senderName: "Juan Dela Cruz",
-    senderPhone: "09123456789",
-    senderProvince: "Laguna",
-    senderCity: "Calamba",
-    senderBarangay: "Real",
-    senderAddress: "123 Rizal St.",
-
-    receiverName: "Maria Santos",
-    receiverPhone: "09987654321",
-    receiverProvince: "Quezon",
-    receiverCity: "Lucena",
-    receiverBarangay: "Ibabang Dupay",
-    receiverAddress: "456 Mabini Ave.",
-  });
+  const [waybillDetails, setWaybillDetails] = useState<any>({});
 
   const bottomDrawerRef = useRef<{
     open: () => void;
@@ -113,19 +83,19 @@ export default function RTSIncomingScreen() {
 
   useEffect(() => {
     const handleScan = async () => {
-      bottomDrawerRef.current?.open();
       if (data) {
         setLoadingScan(true);
 
         try {
           const { data: waybillData } = await axiosInstance(userData.token).get(
-            `/api/orderTransactions/fetchOrderTransactionByOrderNumber?orderNumber=${data}`
+            `/api/orderTransactions/fetchOrderTransactionByOrderNumber?orderNumber=${data.data}`,
           );
           playSuccess();
 
           setWaybillDetails(waybillData);
           setLoadingScan(false);
           setScanned(false);
+          bottomDrawerRef.current?.open();
         } catch (error) {
           playError();
           setLoadingScan(false);
@@ -165,8 +135,8 @@ export default function RTSIncomingScreen() {
           {loadingScan
             ? "Processing..."
             : scanned
-            ? "Camera Locked"
-            : "Ready to Scan"}
+              ? "Camera Locked"
+              : "Ready to Scan"}
         </Text>
       </View>
       {scanResultMessage && (

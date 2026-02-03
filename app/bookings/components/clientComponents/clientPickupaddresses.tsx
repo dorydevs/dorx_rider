@@ -2,6 +2,7 @@ import { useAppSelector } from "@/store/hooks";
 import axiosInstance from "@/utils/axiosInstance";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useIsFocused } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -13,7 +14,6 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-
 // import { useParams } from "react-router-dom";
 type ClientData = any;
 export default function ClientScreen() {
@@ -22,7 +22,7 @@ export default function ClientScreen() {
   const client: ClientData = clientData
     ? JSON.parse(clientData as string)
     : null;
-
+  const isFocused = useIsFocused();
   const { width } = useWindowDimensions();
   const [availableClients, setAvailableClients] = useState<ClientData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,7 +38,7 @@ export default function ClientScreen() {
         if (userData !== null) {
           setLoadingClientData(true);
           const response = await axiosInstance(userData.token).get(
-            `/api/operationAccount/hub/ordersForHubPickup?clientId=${client?.clientId}`
+            `/api/operationAccount/hub/ordersForHubPickup?clientId=${client?.clientId}`,
           );
 
           setAvailableClients(response.data.result);
@@ -49,10 +49,12 @@ export default function ClientScreen() {
         console.log("ERROR handleAvailableClients : >> ", error);
       }
     };
-    if (userData !== null) {
-      handleAvailableClients();
+    if (isFocused) {
+      if (userData !== null) {
+        handleAvailableClients();
+      }
     }
-  }, [userData]);
+  }, [userData, isFocused]);
 
   const handlePress = (item: ClientData) => {
     router.push({

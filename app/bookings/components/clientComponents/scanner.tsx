@@ -5,10 +5,28 @@ import axiosInstance from "@/utils/axiosInstance";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import moment from "moment";
-import { useEffect, useState } from "react";
-import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
+import BottomDrawer from "react-native-animated-bottom-drawer";
+import { Button } from "react-native-paper";
 // import { useParams } from "react-router-dom";\
 type ClientData = any;
+const SheetItem = ({ label, value }: { label: string; value?: any }) => (
+  <View style={{ marginBottom: 10 }}>
+    <Text style={{ fontSize: 12, color: "#6b7280" }}>{label}</Text>
+    <Text style={{ fontSize: 14, fontWeight: "600" }}>{value ?? "-"}</Text>
+  </View>
+);
+
+const Divider = () => (
+  <View style={{ height: 1, backgroundColor: "#e5e7eb", marginVertical: 12 }} />
+);
 
 export default function scanClientScheduledParcel() {
   const { playSuccess, playError, playWarning } = useScannerSounds();
@@ -16,14 +34,23 @@ export default function scanClientScheduledParcel() {
   const { width } = useWindowDimensions();
   const { clientData, clientScheduledToPickUpData, ScheduledData } =
     useLocalSearchParams();
-
+  const bottomDrawerRef = useRef<{
+    open: () => void;
+    close: () => void;
+  } | null>(null);
+  const clientScheduledData: ClientData = ScheduledData
+    ? JSON.parse(ScheduledData as string)
+    : null;
+  const [selectedItem, setSelectedItem] = useState<ClientData | null>(null);
   const [data, setData] = useState<string>("");
   const [scanned, setScanned] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingScan, setLoadingScan] = useState(false);
   const [scannedData, setScannedData] = useState<string[]>([]);
   const [scanResultMessage, setScanResultMessage] = useState("");
-  const [totalPendingCount, setTotalPendingCount] = useState(0);
+  const [totalPendingCount, setTotalPendingCount] = useState(
+    clientScheduledData.orders.length,
+  );
   const [alertColor, setAlertColor] = useState<"green" | "red" | "yellow">(
     "green",
   );
@@ -38,13 +65,7 @@ export default function scanClientScheduledParcel() {
     ? JSON.parse(clientScheduledToPickUpData as string)
     : null;
 
-  const clientScheduledData: ClientData = ScheduledData
-    ? JSON.parse(ScheduledData as string)
-    : null;
-
-  console.log("clientScheduledData : >>> ", clientScheduledData);
-
-  console.log("ScheduledData : >>>", ScheduledData);
+  console.log(clientScheduledData);
 
   const onScan = async (scannedCode: string) => {
     if (scanned) return;
@@ -72,6 +93,8 @@ export default function scanClientScheduledParcel() {
     loadUserData();
   }, [user]);
 
+  console.log("client : >> ", clientScheduledToPickUp);
+
   useEffect(() => {
     async function processScan() {
       if (!data) return;
@@ -87,10 +110,11 @@ export default function scanClientScheduledParcel() {
 
           if (validationResponse.data) {
             console.log("RESUSLT : >>> ", validationResponse.data);
+            setSelectedItem(validationResponse.data);
+
             // validate: only waybills that has status of scheduled-for-pickup are allowed to scan
             if (
-              validationResponse.data.result.orderStatus !==
-              "Scheduled for Pickup"
+              validationResponse.data.orderStatus !== "Scheduled for Pickup"
             ) {
               setScanResultMessage(
                 "Waybills that have the status of 'printed' and 'scheduled-for-pickup' are only allowed to scan.",
@@ -129,6 +153,7 @@ export default function scanClientScheduledParcel() {
                 `/api/orderTransactions/scanWaybill`,
                 scanPayload,
               );
+
               // log scanned data for cds
               const logScanData = await axiosInstance(userData.token).post(
                 `/api/log-scan`,
@@ -152,6 +177,7 @@ export default function scanClientScheduledParcel() {
               setScanResultMessage(
                 scanResponse.data.message ?? "Successfully Scanned!",
               );
+              bottomDrawerRef.current?.open();
 
               // send scanned data to hub
               // socket.emit("send_rider_scanned_inbound_waybill", {
@@ -179,7 +205,7 @@ export default function scanClientScheduledParcel() {
           setTimeout(() => {
             setScanned(false);
             setData("");
-          }, 1000);
+          }, 2000);
         }
       } else {
         setScanResultMessage("Already Scanned!");
@@ -188,7 +214,7 @@ export default function scanClientScheduledParcel() {
         setTimeout(() => {
           setScanned(false);
           setData("");
-        }, 1000);
+        }, 2000);
       }
     }
     if (userData !== null) {
@@ -197,7 +223,13 @@ export default function scanClientScheduledParcel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, userData]);
 
-  console.log("scanned : >> ", scanned);
+  const bottomDrawerClose = () => {
+    if (totalPendingCount === 0) {
+      router.back();
+    } else {
+      bottomDrawerRef.current?.close();
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -232,15 +264,127 @@ export default function scanClientScheduledParcel() {
         }}
       >
         <Text style={{ fontSize: 20 }}>Total Items</Text>
-        <Text style={{ fontSize: 18 }}>
-          {clientScheduledData.orders.length}
-        </Text>
+        <Text style={{ fontSize: 18 }}>{totalPendingCount}</Text>
         {scanResultMessage && (
           <View style={{ padding: 20 }}>
             <Text>Note : {scanResultMessage}</Text>
           </View>
         )}
       </View>
+      <BottomDrawer
+        ref={bottomDrawerRef}
+        initialHeight={560}
+        enableSnapping={false}
+      >
+        <View style={{ height: 500 }}>
+          {scanResultMessage && (
+            <View style={{ alignItems: "center" }}>
+              <View
+                style={{
+                  padding: 20,
+                  borderRadius: 20,
+                  alignItems: "center",
+                  backgroundColor: "#33ad60",
+                  width: 300,
+                }}
+              >
+                <Text
+                  style={{ textAlign: "center", width: "90%", color: "white" }}
+                >
+                  {scanResultMessage}
+                </Text>
+              </View>
+            </View>
+          )}
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {selectedItem && (
+              <View style={{ padding: 16 }}>
+                <View style={styles.items}>
+                  <SheetItem label="Item Name" value={selectedItem.itemName} />
+                  <SheetItem
+                    label="Item Weight"
+                    value={selectedItem.itemWeight}
+                  />
+                  <SheetItem
+                    label="Number Of Items"
+                    value={selectedItem.numberOfItem}
+                  />
+                </View>
+
+                <Divider />
+                <View style={styles.items}>
+                  <SheetItem label="COD Value" value={selectedItem.codValue} />
+                  <SheetItem label="COD Fee" value={selectedItem.codFee} />
+                  <SheetItem
+                    label="Item Value"
+                    value={selectedItem.itemValue}
+                  />
+                </View>
+
+                <Divider />
+                <View style={styles.items}>
+                  <SheetItem
+                    label="Valuation Fee"
+                    value={selectedItem.valuationFee}
+                  />
+                  <SheetItem
+                    label="Receivable Freight"
+                    value={selectedItem.receivableFreight}
+                  />
+                </View>
+
+                <Divider />
+                <View style={styles.items}>
+                  <SheetItem
+                    label="Pouch Size"
+                    value={selectedItem.pouchesSize}
+                  />
+                  <SheetItem label="Remarks" value={selectedItem.remarks} />
+                </View>
+
+                <Divider />
+
+                <SheetItem
+                  label="Total Shipping Costs"
+                  value={selectedItem.totalShippingCost}
+                />
+                <Divider />
+                <SheetItem
+                  label="Waybill Number"
+                  value={selectedItem.waybillNumber}
+                />
+                <SheetItem
+                  label="Order Number"
+                  value={selectedItem.orderNumber}
+                />
+
+                <Divider />
+
+                <SheetItem label="Sender" value={selectedItem.senderName} />
+                <SheetItem
+                  label="Sender Phone"
+                  value={selectedItem.senderPhone}
+                />
+                <SheetItem
+                  label="Sender Address"
+                  value={`${selectedItem.senderProvince}, ${selectedItem.senderCity}, ${selectedItem.senderBarangay}`}
+                />
+
+                <Divider />
+
+                <Button
+                  onPress={() => bottomDrawerClose()}
+                  buttonColor="green"
+                  mode="contained"
+                  textColor="white"
+                >
+                  Close
+                </Button>
+              </View>
+            )}
+          </ScrollView>
+        </View>
+      </BottomDrawer>
     </View>
   );
 }
@@ -248,6 +392,7 @@ export default function scanClientScheduledParcel() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    marginTop: 30,
     padding: 15,
   },
   card: {
@@ -314,4 +459,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   resultText: { fontSize: 14, fontWeight: "600", marginTop: 4 },
+  items: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 10,
+  },
 });

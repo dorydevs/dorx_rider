@@ -5,29 +5,109 @@ import axiosInstance from "@/utils/axiosInstance";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import moment from "moment";
 import { useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-export default function RTSIncomingScreen() {
+export default function RtsFromHub() {
   const router = useRouter();
-
   const { playSuccess, playError, playWarning } = useScannerSounds();
   const [data, setData] = useState<any>("");
   const [scanned, setScanned] = useState(false);
   const user = useAppSelector((state: any) => state.user.user);
   const [userData, setUserData] = useState<any>(null);
+
   const [loadingScan, setLoadingScan] = useState(false);
   const [scanResultMessage, setScanResultMessage] = useState("");
   const [scannedData, setScannedData] = useState<string[]>([]);
   const [alertColor, setAlertColor] = useState("blue");
-  const [totalScannedCount, setTotalScannedCount] = useState(0);
+  const [barangayDestination, setBarangayDestination] = useState("");
 
-  const onScan = async (scannedCode: any) => {
+  const onScan = async (scannedCode: string) => {
     if (scanned) return;
+    console.log("scanned : >> ", scanned);
     setScanResultMessage("");
     setScanned(true);
     setData(scannedCode);
   };
+
+  useEffect(() => {
+    async function processScan() {
+      if (!data) return;
+      if (!scannedData.includes(data)) {
+        setLoadingScan(true);
+
+        // scan waybill
+        try {
+          // validation: order status should be 'Received by branch'
+          // recipient barangay must be one of the assigned pickup area of the rider -- removed because pickup area is only applicable in getting the orders from clients
+          // waybill status should be != 'In transit'
+          // hub transaction origin must be 'Provincial Office'
+          const orderDetail = await axiosInstance(userData.token).get(
+            `/api/orderTransactions/fetchOrderTransactionByOrderNumber?orderNumber=${data.data}`,
+          );
+
+          console.log("DATA ORDER DETAIL : >> ", orderDetail.data);
+
+          console.log(">>> ", orderDetail.data.orderStatus);
+
+          if (
+            orderDetail.data.rtsStatus === "Received by hub" &&
+            JSON.parse(userData.assignedBarangays).includes(
+              orderDetail.data.senderBarangay,
+            )
+          ) {
+            // API CALL HERE
+            // >>
+            await axiosInstance(userData.token).put(
+              `/api/rts-item-customer/rts-hub-to-so/${orderDetail.data.orderTransactionId}`,
+            );
+
+            playSuccess();
+            setScannedData((prev) => [...prev, data]);
+            setBarangayDestination(orderDetail.data.receiverBarangay);
+            setScanResultMessage("Item Successfully Scanned");
+            setAlertColor("green");
+            setScanned(false);
+          } else {
+            console.log("NATAWAG? ");
+            setScanResultMessage(
+              `INVALID \n Item Status : ${orderDetail.data.waybillStatus} \n Already ${orderDetail.data.rtsStatus}`,
+            );
+            setBarangayDestination("");
+            setAlertColor("red");
+            playError();
+            setScanned(false);
+          }
+          setLoadingScan(false);
+        } catch (error: any) {
+          setLoadingScan(false);
+          console.log("RTS FROM HUB TO SO SCANNING ERROR:", error);
+          playError();
+          setAlertColor("red");
+          setScanResultMessage(`ERROR ${error}`);
+          setScanned(false);
+        } finally {
+          setLoadingScan(false);
+          setTimeout(() => {
+            setScanned(false);
+            setData("");
+          }, 2000);
+        }
+      } else {
+        setScanResultMessage("Already Scanned!");
+        setAlertColor("red");
+        setScanned(false);
+        setLoadingScan(false);
+        playError();
+        setTimeout(() => {
+          setScanned(false);
+          setData("");
+        }, 2000);
+      }
+    }
+    if (userData !== null) {
+      processScan();
+    }
+  }, [data, userData]);
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -48,95 +128,6 @@ export default function RTSIncomingScreen() {
     loadUserData();
   }, [user]);
 
-  useEffect(() => {
-    async function processScan() {
-      if (data) {
-        if (!scannedData.includes(data)) {
-          setLoadingScan(true);
-
-          // scan waybill
-          try {
-            // validation: allow scanning only if recipient city is the same as the hub city and waybill status is "for return"
-            const validationResponse = await axiosInstance(userData.token).get(
-              `/api/orderTransactions/fetchOrderTransactionByOrderNumber?orderNumber=${data.data}`,
-            );
-            console.log("validationResponse : >>> ", validationResponse);
-
-            if (
-              validationResponse.data.waybillStatus === "For Return" &&
-              validationResponse.data.rtsStatus === "Received by So"
-            ) {
-              const riderRtsItemPayload = {
-                scannedDate: moment().format("YYYY-MM-DD hh:mm:ss"),
-                origin: "Client",
-                operationAccountId: userData.id,
-                recipientDetailId: validationResponse.data.recipientDetailId,
-                orderTransactionId: validationResponse.data.orderTransactionId,
-                orderNumber: data.data,
-              };
-
-              await axiosInstance(userData.token).put(
-                `/api/orderTransactions/updateWaybillStatus`,
-                {
-                  orderTransactionId:
-                    validationResponse.data.orderTransactionId,
-                  waybillStatus: "Returned",
-                },
-              );
-
-              // create rider to satellite operator return transaction
-              await axiosInstance(userData.token).put(
-                `/api/rts-item-customer`,
-                riderRtsItemPayload,
-              );
-
-              setTotalScannedCount((prev) => prev + 1);
-              playSuccess();
-              setScannedData((prev) => [...prev, data]);
-              setScanResultMessage("Successfully Scanned!");
-              setAlertColor("green");
-              setLoadingScan(false);
-              setScanned(false);
-            } else {
-              setLoadingScan(false);
-              setScanResultMessage("Invalid.");
-              setAlertColor("red");
-              playError();
-              setLoadingScan(false);
-              setScanned(false);
-            }
-            setLoadingScan(false);
-          } catch (error: any) {
-            console.log("RIDER RTS INCOMING ERROR : >> ", error);
-            setScanResultMessage(error.response.data.message);
-            setAlertColor("red");
-            setLoadingScan(false);
-            setScanned(false);
-            playError();
-          } finally {
-            setLoadingScan(false);
-            setTimeout(() => {
-              setScanned(false);
-              setData("");
-            }, 2000);
-          }
-        } else {
-          setScanResultMessage("Already Scanned!");
-          setAlertColor("red");
-          setLoadingScan(false);
-          setScanned(false);
-          setTimeout(() => {
-            setScanned(false);
-            setData("");
-          }, 2000);
-        }
-      }
-    }
-    if (userData !== null) {
-      processScan();
-    }
-  }, [data]);
-
   return (
     <View style={styles.container}>
       <View
@@ -146,10 +137,10 @@ export default function RTSIncomingScreen() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <FontAwesome name="chevron-left" size={24} color="tomato" />
+          <FontAwesome name="chevron-left" size={24} color="#3f6e6c" />
         </TouchableOpacity>
 
-        <Text style={styles.title}>RTS/Return</Text>
+        <Text style={styles.title}>RTS FROM HUB</Text>
       </View>
 
       <BarcodeScanner onScan={onScan} scanned={scanned} />
@@ -196,10 +187,10 @@ const styles = StyleSheet.create({
     marginRight: -10,
   },
   title: {
-    fontSize: 25,
+    fontSize: 22,
     fontWeight: "bold",
     marginBottom: 8,
-    color: "tomato",
+    color: "#3f6e6c",
   },
   subtitle: {
     fontSize: 16,

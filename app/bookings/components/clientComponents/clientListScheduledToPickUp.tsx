@@ -3,10 +3,11 @@ import axiosInstance from "@/utils/axiosInstance";
 import Feather from "@expo/vector-icons/Feather";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useIsFocused } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { groupBy, sortBy } from "lodash";
+import moment from "moment";
 import { useEffect, useState } from "react";
-
 import {
   ActivityIndicator,
   FlatList,
@@ -21,6 +22,7 @@ type ClientData = any;
 
 export default function clientScheduledToPickUp() {
   const router = useRouter();
+  const isFocused = useIsFocused();
   const { width } = useWindowDimensions();
   const { clientData, pickupAddressId } = useLocalSearchParams();
   const [loading, setLoading] = useState(true);
@@ -33,15 +35,26 @@ export default function clientScheduledToPickUp() {
     ? JSON.parse(clientData as string)
     : null;
 
-  const handlePress = (item: ClientData) => {
-    router.push({
-      pathname:
-        "/bookings/components/clientComponents/scanClientScheduledParcel",
-      params: {
-        clientData: JSON.stringify(client),
-        clientScheduledToPickUp: JSON.stringify(item),
-      },
-    });
+  const handlePress = async (item: ClientData) => {
+    const response = await axiosInstance(userData.token).get(
+      `/api/orderTransactions/fetchOrdersForPickupByHub?clientId=${
+        client?.clientId
+      }&&pickupAddressId=${parseFloat(
+        item?.pickupAddressId,
+      )}&&pickupSchedule=${moment(item?.date).format("YYYY-MM-DD")}`,
+    );
+
+    if (response.data.orders.length !== 0) {
+      console.log(item);
+      router.push({
+        pathname: "/bookings/components/clientComponents/scanner",
+        params: {
+          clientData: JSON.stringify(client),
+          clientScheduledToPickUpData: JSON.stringify(item),
+          ScheduledData: JSON.stringify(response.data),
+        },
+      });
+    }
   };
   const renderItem = ({ item }: { item: ClientData }) => {
     {
@@ -106,14 +119,14 @@ export default function clientScheduledToPickUp() {
           const response = await axiosInstance(userData.token).get(
             `/api/orderTransactions/fetchOrdersForPickupByHub?clientId=${
               client?.clientId
-            }&&pickupAddressId=${parseFloat(pickupAddressId as string)}`
+            }&&pickupAddressId=${parseFloat(pickupAddressId as string)}`,
           );
 
           const data = response.data;
-          console.log(data.data);
+          console.log(data);
 
           const forPickup = data?.orders.filter(
-            (d: any) => d.orderStatus === "Scheduled for Pickup"
+            (d: any) => d.orderStatus === "Scheduled for Pickup",
           );
 
           const schedulesGrouped = groupBy(forPickup, "scheduleForPickup");
@@ -130,7 +143,7 @@ export default function clientScheduledToPickUp() {
             };
           });
 
-          setScheduledData(sortBy(schedules, "date"));
+          setScheduledData(sortBy(schedules, "date").reverse());
           setLoading(false);
         }
       } catch (error) {
@@ -138,10 +151,12 @@ export default function clientScheduledToPickUp() {
         setLoading(false);
       }
     };
-    if (userData !== null) {
-      handleScheduledToPickUp();
+    if (isFocused) {
+      if (userData !== null) {
+        handleScheduledToPickUp();
+      }
     }
-  }, [userData]);
+  }, [userData, isFocused]);
 
   return (
     <View style={styles.container}>

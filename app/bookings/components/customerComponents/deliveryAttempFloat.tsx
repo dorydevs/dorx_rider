@@ -1,13 +1,13 @@
 import React from "react";
 import {
   ActivityIndicator,
-  Modal,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-
+import BottomDrawer from "react-native-animated-bottom-drawer";
 interface DeliveryAttemptFloatPanelProps {
   orderInfo: any;
   floatPanel: boolean;
@@ -17,6 +17,7 @@ interface DeliveryAttemptFloatPanelProps {
   success: boolean;
   loading: boolean;
   successMessage: string;
+  bottomDrawerRef: any;
 }
 
 const DeliveryAttemptFloatPanel: React.FC<DeliveryAttemptFloatPanelProps> = ({
@@ -28,16 +29,16 @@ const DeliveryAttemptFloatPanel: React.FC<DeliveryAttemptFloatPanelProps> = ({
   success,
   loading,
   successMessage,
+  bottomDrawerRef,
 }) => {
   return (
-    <Modal
-      visible={floatPanel}
-      transparent
-      animationType="slide"
-      onRequestClose={onCloseFloatPanel}
+    <BottomDrawer
+      ref={bottomDrawerRef}
+      initialHeight={560}
+      enableSnapping={false}
     >
       <View style={styles.overlay}>
-        <View style={styles.container}>
+        <ScrollView style={styles.container}>
           {/* Order Card */}
           <View style={styles.card}>
             <Text style={styles.boldText}>{orderInfo?.itemName}</Text>
@@ -102,9 +103,9 @@ const DeliveryAttemptFloatPanel: React.FC<DeliveryAttemptFloatPanelProps> = ({
           >
             <Text style={styles.buttonText}>Close</Text>
           </TouchableOpacity>
-        </View>
+        </ScrollView>
       </View>
-    </Modal>
+    </BottomDrawer>
   );
 };
 
