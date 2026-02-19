@@ -46,6 +46,7 @@ export default function ClientScreen() {
     loadUserData();
   }, [user]);
 
+  console.log("userData.assignedBarangays : >> ", userData);
   useEffect(() => {
     if (isFocused) {
       if (userData !== null) {
@@ -54,7 +55,7 @@ export default function ClientScreen() {
           setError(null);
           try {
             const response = await axiosInstance(userData.token).get(
-              `/api/riderTransaction/clientBookings?hubCity=${userData?.storeCity}&riderId=${userData?.id}`,
+              `/api/riderTransaction/clientBookings?hubCity=${userData?.storeCity}&riderId=${userData?.id}$groupArea=${userData?.assignedBarangays}`,
             );
             console.log(">>>>>>>>> ", response.data.result);
             setclientData(response.data.result);

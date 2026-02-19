@@ -158,7 +158,7 @@ export default function scanClientScheduledParcel() {
               const logScanData = await axiosInstance(userData.token).post(
                 `/api/log-scan`,
                 {
-                  shippingFee: orderTransaction?.receivableFreight,
+                  shippingFee: validationResponse.data.receivableFreight,
                   transactionType: "inbound",
                   wareHouseId: userData.storeId,
                   wareHouseType: "store",

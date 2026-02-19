@@ -5,10 +5,17 @@ import { useAppSelector } from "@/store/hooks";
 import axiosInstance from "@/utils/axiosInstance";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { CameraType, CameraView, useCameraPermissions } from "expo-camera";
+import * as FileSystem from "expo-file-system/legacy";
+import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import moment from "moment";
 import { useEffect, useRef, useState } from "react";
+
 import {
   ActivityIndicator,
+  Dimensions,
+  Image,
   Keyboard,
   ScrollView,
   StyleSheet,
@@ -17,12 +24,16 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-
 import BottomDrawer from "react-native-animated-bottom-drawer";
+import MapView, { Marker } from "react-native-maps";
 import { Button } from "react-native-paper";
+import ViewShot, { captureRef } from "react-native-view-shot";
+const { width: any } = Dimensions.get("window");
 export default function CustomersScreen() {
   const router = useRouter();
-
+  const viewShotRef = useRef(null);
+  const [visible, setVisible] = useState(false);
+  const [locationDenied, setLocationDenied] = useState(false);
   const { playSuccess, playError, playWarning } = useScannerSounds();
   const [data, setData] = useState<any>("");
   const [scanned, setScanned] = useState(false);
@@ -35,18 +46,37 @@ export default function CustomersScreen() {
   const [waybillDetails, setWaybillDetails] = useState<any>({});
   const [success, setSuccess] = useState(false);
   const { clientData } = useLocalSearchParams();
+  const [isPODActive, setIsPODActive] = useState(false);
   const [showReturn, setShowReturn] = useState(false);
   const [loading, setLoading] = useState(false);
   const [reason, setReason] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState("");
   const [attemptsLoading, setAttemptsLoading] = useState(false);
-  const [attempts, setAttempts] = useState("");
+  const [attempts, setAttempts] = useState<any>("");
   const [attemptsMessage, setAttemptsMessage] = useState<any>("");
   const [attemptReached, setAttemptReached] = useState<Boolean>(false);
+  const [previewReady, setPreviewReady] = useState(false);
   const [orderNumber, setOrderNumber] = useState<any>("");
+  const [permission, requestPermission] = useCameraPermissions();
   // const attemptReached = attempts === "reached" ? true : false;
+  const [facing, setFacing] = useState<CameraType>("back");
+  const cameraRef = useRef<CameraView | null>(null);
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [photoToUpload, setPhotoToUpload] = useState<string | null>(null);
+  const [imageCapturingloading, setImageCapturingloading] =
+    useState<boolean>(false);
+  const [previewKey, setPreviewKey] = useState(0);
+  const [showScanner, setShowScanner] = useState(true);
+  const [coords, setCoords] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
 
   const bottomDrawerRef = useRef<{
+    open: () => void;
+    close: () => void;
+  } | null>(null);
+  const cameraButtomDrawer = useRef<{
     open: () => void;
     close: () => void;
   } | null>(null);
@@ -57,6 +87,22 @@ export default function CustomersScreen() {
     open: () => void;
     close: () => void;
   } | null>(null);
+
+  const openCameraDrawer = () => {
+    setShowScanner(false); // Unmount scanner first
+    setTimeout(() => {
+      setIsPODActive(true);
+      cameraButtomDrawer.current?.open();
+    }, 300); // 300ms delay is usually enough for the OS to release hardware
+  };
+
+  const closeCameraDrawer = () => {
+    setIsPODActive(false);
+    cameraButtomDrawer.current?.close();
+    setTimeout(() => {
+      setShowScanner(true); // Re-mount scanner after drawer closes
+    }, 300);
+  };
 
   useEffect(() => {
     const handleAttempChecker = async () => {
@@ -104,10 +150,22 @@ export default function CustomersScreen() {
             remarks: reason,
           },
         );
+        console.log(attempts === "third");
+
         if (attempts === "third") {
+          console.log("NATAWAG BA TONG FOR RETURN");
           onUpdateWaybillStatus("For Return");
+          await axiosInstance(userData.token).put(
+            `/api/orderTransactions/updateWaybillStatus`,
+            {
+              orderTransactionId: waybillDetails.orderTransactionId,
+              waybillStatus: "For Return",
+            },
+          );
+
           bottomDrawerRef.current?.close();
           bottomDrawerForReturnref.current?.close();
+          cameraButtomDrawer.current?.close();
         }
         console.log("END API CALL");
         // Toast.show({
@@ -174,7 +232,11 @@ export default function CustomersScreen() {
           console.log("waybillData : >>> ", waybillData);
           // validation: delivery area (barangay) should be same as the parcel destination barangay
           if (waybillData.waybillStatus === "Delivering") {
-            if (userData.storeBarangay === waybillData.receiverBarangay) {
+            if (
+              JSON.parse(userData.assignedBarangays).includes(
+                waybillData.receiverBarangay,
+              )
+            ) {
               playSuccess();
               setLoadingScan(false);
               setSuccess(false);
@@ -222,36 +284,90 @@ export default function CustomersScreen() {
 
   const onUpdateWaybillStatus = async (status: any) => {
     setLoading(true);
+    try {
+      if (!viewShotRef.current) return;
+      if (!previewReady) {
+        console.log("Preview not ready yet...");
+        return;
+      }
 
-    const { data: responseData } = await axiosInstance(userData.token).put(
-      `/api/orderTransactions/updateWaybillStatus`,
-      {
-        orderTransactionId: waybillDetails.orderTransactionId,
-        waybillStatus: status,
-      },
-    );
+      // allow overlay render
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
-    if (responseData?.message === "Successfully Updated") {
-      setSuccess(true);
-      if (status === "Delivered") {
-        // log scanned data for cds
-        const logScanData = await axiosInstance(userData.token).post(
-          `/api/log-scan`,
-          {
-            shippingFee: waybillDetails.receivableFreight,
-            transactionType: "outbound",
-            wareHouseId: userData.storeId,
-            wareHouseType: "store",
-            orderTransactionId: waybillDetails.orderTransactionId,
+      const tmpUri = await captureRef(viewShotRef.current, {
+        format: "jpg",
+        quality: 0.8,
+        result: "tmpfile",
+      });
+
+      const uniqueUri = FileSystem?.cacheDirectory + `pod-${Date.now()}.jpg`;
+
+      // Copy snapshot into new unique file
+      await FileSystem.copyAsync({
+        from: tmpUri,
+        to: uniqueUri,
+      });
+
+      const finalImageUri = uniqueUri;
+
+      const formData = new FormData();
+
+      // Construct the file object correctly for React Native
+      const filename = finalImageUri.split("/").pop();
+      const match = /\.(\w+)$/.exec(filename || "");
+      const type = match ? `image/${match[1]}` : `image`;
+
+      formData.append("orderTransactionId", waybillDetails.orderTransactionId);
+      formData.append("waybillStatus", status);
+      console.log("finalImageUri : >>> ", finalImageUri);
+      // DO NOT use a Blob; use this object format:
+      formData.append("image", {
+        uri: finalImageUri,
+        name: filename,
+        type: type,
+      } as any);
+
+      const { data: responseData } = await axiosInstance(userData.token).put(
+        `/api/orderTransactions/updateWaybillStatus`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
           },
-        );
-        bottomDrawerRef.current?.close();
-        bottomDrawerForReturnref.current?.close();
-        setShowReturn(false);
-        console.log(">>> logScanData:", logScanData);
-        setSuccessMessage("Successfully Delivered");
-      } else if (status === "For Return")
-        setSuccessMessage("Successfully Updated - For Return");
+        },
+      );
+      if (responseData?.message === "Successfully Updated") {
+        setSuccess(true);
+        if (status === "Delivered") {
+          // log scanned data for cds
+          const logScanData = await axiosInstance(userData.token).post(
+            `/api/log-scan`,
+            {
+              shippingFee: responseData.receivableFreight,
+              transactionType: "outbound",
+              wareHouseId: userData.storeId,
+              wareHouseType: "store",
+              orderTransactionId: waybillDetails.orderTransactionId,
+            },
+          );
+          bottomDrawerRef.current?.close();
+          bottomDrawerForReturnref.current?.close();
+          cameraButtomDrawer.current?.close();
+          setShowReturn(false);
+          console.log(">>> logScanData:", logScanData);
+          setSuccessMessage("Successfully Delivered");
+        } else if (status === "For Return")
+          setSuccessMessage("Successfully Updated - For Return");
+      }
+      setPreviewReady(false);
+      setPreviewKey((prev) => prev + 1);
+      setPhotoUri(null);
+      setTimeout(() => {
+        setShowScanner(true); // Re-mount scanner after drawer closes
+      }, 300);
+    } catch (error) {
+      setPhotoUri(null);
+      console.log("onUpdateWaybillStatus ERROR : >>> ", error);
     }
 
     setLoading(false);
@@ -268,6 +384,95 @@ export default function CustomersScreen() {
     setAttemptsMessage("");
   };
 
+  const takePhoto = async () => {
+    if (!cameraRef.current) return;
+
+    setImageCapturingloading(true);
+
+    try {
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.7,
+        skipProcessing: true,
+      });
+      setPreviewReady(false);
+      // const locationPermission =
+      //   await Location.requestForegroundPermissionsAsync();
+      // if (locationPermission.status === "granted") {
+      //   const location = await Location.getCurrentPositionAsync({});
+      //   setCoords({
+      //     latitude: location.coords.latitude,
+      //     longitude: location.coords.longitude,
+      //   });
+      // }
+
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        setVisible(true);
+        setLocationDenied(true);
+        throw new Error("Permission denied");
+      }
+
+      // Try last known position first
+      let loc: any = await Location.getLastKnownPositionAsync();
+      if (!loc) {
+        // race between getCurrentPositionAsync and timeout
+        const timeout = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("timed out")), 15000),
+        );
+        const posPromise = Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+          maximumAge: 10000,
+        });
+
+        loc = await Promise.race([posPromise, timeout]);
+      }
+      if (!loc?.coords) throw new Error("Failed to get coords");
+      const { latitude, longitude } = loc.coords;
+      setCoords({
+        latitude: latitude,
+        longitude: longitude,
+      });
+
+      setPhotoUri(photo.uri);
+
+      setImageCapturingloading(false);
+    } catch (err) {
+      setImageCapturingloading(false);
+      console.log("Error capturing photo:", err);
+    } finally {
+      setImageCapturingloading(false);
+    }
+  };
+
+  if (!permission) {
+    return <View />;
+  }
+
+  if (!permission.granted) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.message}>
+          We need your permission to show the camera
+        </Text>
+        <Button onPress={requestPermission} title="grant permission" />
+      </View>
+    );
+  }
+
+  // ✅ Cancel the last captured photo
+  const cancelPhoto = () => {
+    setPhotoUri(null);
+    setCoords(null);
+  };
+
+  // ✅ Submit handler
+  const submitPhoto = () => {
+    if (!photoUri) return;
+    onUpdateWaybillStatus("Delivered");
+
+    // Add your API or dispatch logic here
+  };
+  const newLocal = "green";
   return (
     <View style={styles.container}>
       <View
@@ -283,7 +488,13 @@ export default function CustomersScreen() {
         <Text style={styles.title}>Customers</Text>
       </View>
 
-      <BarcodeScanner onScan={onScan} scanned={scanned} />
+      {showScanner && (
+        <BarcodeScanner
+          key="background-scanner"
+          onScan={onScan}
+          scanned={scanned}
+        />
+      )}
       <View style={styles.statusContainer}>
         <View
           style={[
@@ -299,6 +510,7 @@ export default function CustomersScreen() {
               : "Ready to Scan"}
         </Text>
       </View>
+
       {scanResultMessage && (
         <Text
           style={{
@@ -406,7 +618,8 @@ export default function CustomersScreen() {
                   <>
                     <TouchableOpacity
                       style={[styles.button, styles.successButton]}
-                      onPress={() => onUpdateWaybillStatus("Delivered")}
+                      // onPress={() => onUpdateWaybillStatus("Delivered")}
+                      onPress={() => openCameraDrawer()}
                     >
                       <Text style={styles.buttonText}>Mark As Delivered</Text>
                     </TouchableOpacity>
@@ -455,6 +668,157 @@ export default function CustomersScreen() {
               <Text style={styles.buttonText}>Close</Text>
             </TouchableOpacity>
           </ScrollView>
+        </View>
+      </BottomDrawer>
+
+      <BottomDrawer
+        ref={cameraButtomDrawer}
+        initialHeight={650}
+        enableSnapping={false}
+        closeOnBackdropPress={false}
+        closeOnPressBack={false}
+        gestureMode="none"
+      >
+        <View style={{ padding: 20 }}>
+          {isPODActive && !photoUri ? (
+            <CameraView
+              key="drawer-camera"
+              ref={cameraRef}
+              style={styles.camera}
+              facing="back"
+            />
+          ) : (
+            <ViewShot
+              key={previewKey}
+              ref={viewShotRef}
+              options={{ format: "jpg", quality: 0.8 }}
+            >
+              <View collapsable={false}>
+                <Image
+                  onLoadEnd={() => setPreviewReady(true)}
+                  source={{ uri: photoUri }}
+                  style={styles.camera}
+                />
+
+                {imageCapturingloading ? (
+                  <View style={styles.coordContainer}>
+                    <Text style={styles.coordText}>
+                      Coordinates still processing...
+                    </Text>
+                  </View>
+                ) : (
+                  coords && (
+                    <View style={styles.coordContainer}>
+                      <View
+                        style={{
+                          height: 70,
+                          width: "30%",
+                          borderRadius: 20,
+                          overflow: "hidden",
+                        }}
+                      >
+                        <MapView
+                          style={{ flex: 1 }}
+                          collapsable={false}
+                          initialRegion={{
+                            latitude: coords.latitude,
+                            longitude: coords.longitude,
+                            latitudeDelta: 0.002,
+                            longitudeDelta: 0.002,
+                          }}
+                          scrollEnabled={false}
+                          zoomEnabled={false}
+                        >
+                          <Marker coordinate={coords} />
+                        </MapView>
+                      </View>
+
+                      <View>
+                        <Text style={{ fontSize: 11, color: "white" }}>
+                          {moment().format("DD-MM-YYYY-hh:mm:ss-A")}
+                        </Text>
+                        <Text style={styles.coordText}>
+                          Lat: {coords.latitude.toFixed(6)}
+                        </Text>
+                        <Text style={styles.coordText}>
+                          Lng: {coords.longitude.toFixed(6)}
+                        </Text>
+                        <Text style={{ fontSize: 12, color: "white" }}>
+                          WBN : {waybillDetails.waybillNumber}
+                        </Text>
+                      </View>
+                    </View>
+                  )
+                )}
+              </View>
+            </ViewShot>
+          )}
+
+          {/* Action buttons */}
+          <View style={{ flexDirection: "column", gap: 10, marginTop: 10 }}>
+            {!photoUri ? (
+              <TouchableOpacity
+                style={[styles.button, styles.successButton]}
+                onPress={takePhoto}
+                disabled={loading}
+              >
+                <Text style={styles.buttonText}>Take Photo</Text>
+              </TouchableOpacity>
+            ) : (
+              <>
+                <TouchableOpacity
+                  // style={[styles.button, styles.successButton]}
+                  onPress={submitPhoto}
+                  disabled={loading}
+                >
+                  <Button
+                    buttonColor="#4CAF50"
+                    textColor="white"
+                    onPress={submitPhoto}
+                    mode="contained"
+                    loading={loading}
+                    disabled={loading}
+                  >
+                    Submit
+                  </Button>
+                  {/* <Text style={styles.buttonText}>Submit</Text> */}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  // style={[styles.button, styles.cancelButton]}
+                  // onPress={cancelPhoto}
+                  disabled={loading}
+                >
+                  <Button
+                    buttonColor="#f44336"
+                    textColor="white"
+                    onPress={cancelPhoto}
+                    mode="contained"
+                    // loading={loading}
+                    // disabled={loading}
+                  >
+                    Cancel
+                  </Button>
+                </TouchableOpacity>
+              </>
+            )}
+
+            <TouchableOpacity
+              // style={[styles.button, styles.closeButton]}
+
+              disabled={loading}
+            >
+              <Button
+                buttonColor="#9E9E9E"
+                textColor="white"
+                onPress={() => closeCameraDrawer()}
+                mode="contained"
+                // loading={loading}
+                // disabled={loading}
+              >
+                Close
+              </Button>
+            </TouchableOpacity>
+          </View>
         </View>
       </BottomDrawer>
 
@@ -509,6 +873,59 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
+  },
+
+  buttonText: { color: "#fff", fontWeight: "bold" },
+  successButton: { backgroundColor: "#4CAF50" },
+  cancelButton: { backgroundColor: "#f44336" },
+  submitButton: { backgroundColor: "#2196F3" },
+  closeButton: { backgroundColor: "#9E9E9E" },
+  camera: {
+    width: "100%",
+    height: 400,
+    borderRadius: 10,
+    backgroundColor: "#000",
+  },
+  coordContainer: {
+    position: "absolute",
+    top: 22,
+    left: 20,
+    backgroundColor: "rgba(0, 0, 0, 0.34)",
+    padding: 5,
+    borderRadius: 10,
+    flexDirection: "row",
+    gap: 10,
+    alignItems: "flex-end",
+  },
+  coordText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  bottom: {
+    position: "absolute",
+    bottom: 40,
+    width: "100%",
+    alignItems: "center",
+  },
+
+  message: {
+    textAlign: "center",
+    paddingBottom: 10,
+  },
+
+  buttonContainer: {
+    position: "absolute",
+    bottom: 64,
+    flexDirection: "row",
+    backgroundColor: "transparent",
+    width: "100%",
+    paddingHorizontal: 64,
+  },
+
+  text: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "white",
   },
   backButton: {
     width: 40,
@@ -610,19 +1027,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginVertical: 6,
   },
-  successButton: {
-    backgroundColor: "#22c55e",
-  },
+
   warningButton: {
     backgroundColor: "#f59e0b",
   },
-  closeButton: {
-    backgroundColor: "#6b7280",
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
+
   successText: {
     fontSize: 32,
     marginBottom: 8,
