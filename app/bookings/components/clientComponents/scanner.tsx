@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import BottomDrawer from "react-native-animated-bottom-drawer";
 import { Button } from "react-native-paper";
-// import { useParams } from "react-router-dom";\
+
 type ClientData = any;
 const SheetItem = ({ label, value }: { label: string; value?: any }) => (
   <View style={{ marginBottom: 10 }}>
@@ -44,16 +44,13 @@ export default function scanClientScheduledParcel() {
   const [selectedItem, setSelectedItem] = useState<ClientData | null>(null);
   const [data, setData] = useState<string>("");
   const [scanned, setScanned] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [loadingScan, setLoadingScan] = useState(false);
   const [scannedData, setScannedData] = useState<string[]>([]);
   const [scanResultMessage, setScanResultMessage] = useState("");
   const [totalPendingCount, setTotalPendingCount] = useState(
     clientScheduledData.orders.length,
   );
-  const [alertColor, setAlertColor] = useState<"green" | "red" | "yellow">(
-    "green",
-  );
+  const [alertColor, setAlertColor] = useState<"green" | "yellow" | "red">("green");
   const user = useAppSelector((state: any) => state.user.user);
   const [userData, setUserData] = useState<any>(null);
 
@@ -64,8 +61,6 @@ export default function scanClientScheduledParcel() {
   const clientScheduledToPickUp: ClientData = clientScheduledToPickUpData
     ? JSON.parse(clientScheduledToPickUpData as string)
     : null;
-
-  console.log(clientScheduledData);
 
   const onScan = async (scannedCode: string) => {
     if (scanned) return;
@@ -85,22 +80,19 @@ export default function scanClientScheduledParcel() {
         }
       } catch (error) {
         console.error("Error loading user data:", error);
-      } finally {
-        console.log("SUCCESS");
       }
     };
 
     loadUserData();
   }, [user]);
 
-  console.log("client : >> ", clientScheduledToPickUp);
-
   useEffect(() => {
     async function processScan() {
       if (!data) return;
 
-      if (!scannedData.includes(data)) {
+      if (!scannedData.includes(data.data)) {
         setLoadingScan(true);
+        setScanResultMessage("");
 
         try {
           // Validate order number
@@ -108,113 +100,143 @@ export default function scanClientScheduledParcel() {
             `/api/orderTransactions/fetchOrderTransactionByOrderNumber?orderNumber=${data.data}&clientId=${client.clientId}&pickupAddressId=${clientScheduledToPickUp.pickupAddressId}`,
           );
 
-          if (validationResponse.data) {
-            console.log("RESUSLT : >>> ", validationResponse.data);
-            setSelectedItem(validationResponse.data);
-
-            // validate: only waybills that has status of scheduled-for-pickup are allowed to scan
-            if (
-              validationResponse.data.orderStatus !== "Scheduled for Pickup"
-            ) {
-              setScanResultMessage(
-                "Waybills that have the status of 'printed' and 'scheduled-for-pickup' are only allowed to scan.",
-              );
-              setAlertColor("yellow");
-              //   notAllowed = true;
-              //   playWarningSound();
-              setLoadingScan(false);
-              return;
-            } else {
-              // scan waybill
-              // setWaybillBelongsToSelectedPickupAdd(true);
-
-              const scanPayload = {
-                orderNumber: data.data,
-                status: "Picked up by Rider",
-              };
-              const orderTransaction = clientScheduledData.orders.find(
-                (d: any) => d.orderNumber === data,
-              );
-
-              const transactionPayload = {
-                status: "picked-up",
-                scannedDate: moment().format("YYYY-MM-DD hh:mm:ss"),
-                riderId: userData.id,
-                orderTransactionId: orderTransaction?.orderTransactionId,
-              };
-
-              // // create store inbound scanning transaction
-              await axiosInstance(userData.token).post(
-                `/api/riderTransaction`,
-                transactionPayload,
-              );
-              // update order status
-              const scanResponse = await axiosInstance(userData.token).put(
-                `/api/orderTransactions/scanWaybill`,
-                scanPayload,
-              );
-
-              // log scanned data for cds
-              const logScanData = await axiosInstance(userData.token).post(
-                `/api/log-scan`,
-                {
-                  shippingFee: validationResponse.data.receivableFreight,
-                  transactionType: "inbound",
-                  wareHouseId: userData.storeId,
-                  wareHouseType: "store",
-                  orderTransactionId: orderTransaction?.orderTransactionId,
-                },
-              );
-              console.log(">>> logScanData:", logScanData);
-
-              playSuccess();
-              setTotalPendingCount((prev) => prev - 1);
-              //   setTotalScannedCount((prev) => prev + 1);
-
-              setAlertColor("green");
-
-              setScannedData((prev) => [...prev, data]);
-              setScanResultMessage(
-                scanResponse.data.message ?? "Successfully Scanned!",
-              );
-              bottomDrawerRef.current?.open();
-
-              // send scanned data to hub
-              // socket.emit("send_rider_scanned_inbound_waybill", {
-              //   data: {
-              //     clientId: client.clientId,
-              //     orderNumber: data,
-              //   },
-              // });
-            }
-          } else {
-            setScanResultMessage("Invalid.");
-            setAlertColor("red");
-            setLoadingScan(false);
-            playError();
+          if (!validationResponse.data) {
+            throw new Error("Order not found. Please check the waybill number.");
           }
+
+          setSelectedItem(validationResponse.data);
+
+          // Validate order status
+          if (validationResponse.data.orderStatus !== "Scheduled for Pickup") {
+            setScanResultMessage(
+              `Cannot scan: Order status is "${validationResponse.data.orderStatus}". Only orders with "Scheduled for Pickup" status can be scanned.`,
+            );
+            setAlertColor("yellow");
+            playWarning();
+            setLoadingScan(false);
+            setTimeout(() => {
+              setScanResultMessage("");
+              setScanned(false);
+              setData("");
+            }, 4000);
+            return;
+          }
+
+          // Find order transaction
+          const orderTransaction = clientScheduledData.orders.find(
+            (d: any) => d.orderNumber === data.data,
+          );
+
+          if (!orderTransaction) {
+            setScanResultMessage(
+              "Order not found in scheduled pickup list. Please refresh and try again.",
+            );
+            setAlertColor("yellow");
+            playWarning();
+            setLoadingScan(false);
+            setTimeout(() => {
+              setScanResultMessage("");
+              setScanned(false);
+              setData("");
+            }, 4000);
+            return;
+          }
+
+          // Prepare payloads
+          const scanPayload = {
+            orderNumber: data.data,
+            status: "Picked up by Rider",
+          };
+
+          const transactionPayload = {
+            status: "picked-up",
+            scannedDate: moment().format("YYYY-MM-DD HH:mm:ss"),
+            riderId: userData.id,
+            orderTransactionId: orderTransaction.orderTransactionId,
+          };
+
+          // Create rider transaction
+          await axiosInstance(userData.token).post(
+            `/api/riderTransaction`,
+            transactionPayload,
+          );
+
+          // Update order status
+          const scanResponse = await axiosInstance(userData.token).put(
+            `/api/orderTransactions/scanWaybill`,
+            scanPayload,
+          );
+
+          // Log scanned data for CDS
+          await axiosInstance(userData.token).post(
+            `/api/log-scan`,
+            {
+              shippingFee: validationResponse.data.receivableFreight,
+              transactionType: "inbound",
+              wareHouseId: userData.storeId,
+              wareHouseType: "store",
+              orderTransactionId: orderTransaction.orderTransactionId,
+            },
+          );
+
           playSuccess();
-        } catch (error) {
-          console.error("HUB SCANNING ERROR:", error);
-          setScanResultMessage("Scanning Error");
-          setAlertColor("red");
-          setLoadingScan(false);
-          playError();
-        } finally {
-          setLoadingScan(false);
+          setTotalPendingCount((prev) => prev - 1);
+          setAlertColor("green");
+          setScannedData((prev) => [...prev, data.data]);
+          setScanResultMessage(
+            scanResponse.data.message ?? `✓ Successfully scanned! ${totalPendingCount - 1} items remaining.`,
+          );
+          bottomDrawerRef.current?.open();
+          
           setTimeout(() => {
             setScanned(false);
             setData("");
           }, 2000);
+
+        } catch (error: any) {
+          console.error("CLIENT SCANNING ERROR:", error);
+          playError();
+          setAlertColor("red");
+          setLoadingScan(false);
+          
+          let errorMessage = "Scanning failed. ";
+          
+          if (error.message === "Network Error" || !error.response) {
+            errorMessage += "Network connection error. Please check your internet and try again.";
+          } else if (error.response?.status === 404) {
+            errorMessage += "Order not found or not assigned to this pickup address.";
+          } else if (error.response?.status === 400) {
+            errorMessage += error.response?.data?.message || "Invalid request. Please check the order details.";
+          } else if (error.response?.status === 401) {
+            errorMessage += "Session expired. Please log in again.";
+          } else if (error.response?.status === 409) {
+            errorMessage += "This order has already been processed.";
+          } else if (error.response?.data?.message) {
+            errorMessage += error.response.data.message;
+          } else if (error.message) {
+            errorMessage += error.message;
+          } else {
+            errorMessage += "Unknown error occurred. Please try again.";
+          }
+          
+          setScanResultMessage(errorMessage);
+          setTimeout(() => {
+            setScanResultMessage("");
+            setScanned(false);
+            setData("");
+          }, 5000);
+        } finally {
+          setLoadingScan(false);
         }
       } else {
-        setScanResultMessage("Already Scanned!");
+        setScanResultMessage("⚠ This item has already been scanned.");
         setAlertColor("yellow");
         playWarning();
         setTimeout(() => {
+          setScanResultMessage("");
           setScanned(false);
           setData("");
-        }, 2000);
+        }, 3000);
       }
     }
     if (userData !== null) {
@@ -255,51 +277,107 @@ export default function scanClientScheduledParcel() {
       <View
         style={{
           padding: 20,
-          elevation: 2,
+          elevation: 4,
           backgroundColor: "white",
           flexDirection: "column",
           alignItems: "center",
-          borderRadius: 20,
+          borderRadius: 16,
           marginTop: 20,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
         }}
       >
-        <Text style={{ fontSize: 20 }}>Total Items</Text>
-        <Text style={{ fontSize: 18 }}>{totalPendingCount}</Text>
-        {scanResultMessage && (
-          <View style={{ padding: 20 }}>
-            <Text>Note : {scanResultMessage}</Text>
-          </View>
-        )}
+        <Text style={{ fontSize: 20, fontWeight: "600", color: "#2c3e50", marginBottom: 4 }}>Items Remaining</Text>
+        <Text style={{ fontSize: 32, fontWeight: "700", color: "#22c55e" }}>{totalPendingCount}</Text>
+        <Text style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>
+          {scannedData.length} scanned
+        </Text>
       </View>
+      
+      {scanResultMessage && (
+        <View style={[
+          styles.resultAlert,
+          alertColor === "green" ? styles.successAlert : 
+          alertColor === "yellow" ? styles.warningAlert : 
+          styles.errorAlert
+        ]}>
+          <Ionicons 
+            name={
+              alertColor === "green" ? "checkmark-circle" : 
+              alertColor === "yellow" ? "warning" : 
+              "close-circle"
+            } 
+            size={24} 
+            color={
+              alertColor === "green" ? "#22c55e" : 
+              alertColor === "yellow" ? "#f59e0b" : 
+              "#ef4444"
+            } 
+          />
+          <Text style={[
+            styles.resultText,
+            alertColor === "green" ? { color: "#16a34a" } : 
+            alertColor === "yellow" ? { color: "#d97706" } : 
+            { color: "#dc2626" }
+          ]}>
+            {scanResultMessage}
+          </Text>
+        </View>
+      )}
       <BottomDrawer
         ref={bottomDrawerRef}
         initialHeight={560}
         enableSnapping={false}
+        handleComponent={() => null}
+        customStyles={{
+          container: {
+            backgroundColor: "#fff",
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: -2 },
+            shadowOpacity: 0.15,
+            shadowRadius: 8,
+            elevation: 8,
+            borderWidth: 0,
+            borderTopWidth: 0,
+            overflow: "hidden",
+          },
+          drawerContainer: {
+            backgroundColor: "#fff",
+            borderWidth: 0,
+            borderTopWidth: 0,
+            paddingTop: 0,
+            marginTop: 0,
+          },
+          handle: {
+            display: "none",
+            height: 0,
+            width: 0,
+            backgroundColor: "transparent",
+          },
+          handleIndicator: {
+            display: "none",
+            height: 0,
+            width: 0,
+            backgroundColor: "transparent",
+          },
+        }}
       >
-        <View style={{ height: 500 }}>
+        <View style={{ backgroundColor: "#fff", marginTop: -20, paddingTop: 20 }}>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.drawerContent}>
           {scanResultMessage && (
-            <View style={{ alignItems: "center" }}>
-              <View
-                style={{
-                  padding: 20,
-                  borderRadius: 20,
-                  alignItems: "center",
-                  backgroundColor: "#33ad60",
-                  width: 300,
-                }}
-              >
-                <Text
-                  style={{ textAlign: "center", width: "90%", color: "white" }}
-                >
-                  {scanResultMessage}
-                </Text>
-              </View>
+            <View style={styles.successBanner}>
+              <Text style={styles.successBannerText}>
+                {scanResultMessage}
+              </Text>
             </View>
           )}
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {selectedItem && (
-              <View style={{ padding: 16 }}>
-                <View style={styles.items}>
+          {selectedItem && (
+            <View>
+              <View style={styles.items}>
                   <SheetItem label="Item Name" value={selectedItem.itemName} />
                   <SheetItem
                     label="Item Weight"
@@ -412,8 +490,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 15,
     fontWeight: "bold",
-
-    color: "#50a3fc",
+    color: "#4ade80",
   },
   subtitle: {
     fontSize: 16,
@@ -451,18 +528,66 @@ const styles = StyleSheet.create({
   },
 
   resultAlert: {
-    marginTop: 10,
+    marginTop: 20,
     marginHorizontal: 12,
-    padding: 10,
-    borderRadius: 8,
-    borderWidth: 2,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    flexDirection: "row",
     alignItems: "center",
+    gap: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  resultText: { fontSize: 14, fontWeight: "600", marginTop: 4 },
+  successAlert: {
+    backgroundColor: "#d1fae5",
+    borderColor: "#22c55e",
+  },
+  warningAlert: {
+    backgroundColor: "#fef3c7",
+    borderColor: "#f59e0b",
+  },
+  errorAlert: {
+    backgroundColor: "#fee2e2",
+    borderColor: "#ef4444",
+  },
+  resultText: { 
+    flex: 1,
+    fontSize: 14, 
+    fontWeight: "600", 
+    lineHeight: 20,
+  },
   items: {
     flexDirection: "row",
     alignItems: "center",
     flexWrap: "wrap",
     gap: 10,
+  },
+  drawerHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: "#e8ecf1",
+    borderRadius: 2,
+    alignSelf: "center",
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  drawerContent: {
+    padding: 20,
+  },
+  successBanner: {
+    backgroundColor: "#22c55e",
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  successBannerText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+    textAlign: "center",
   },
 });

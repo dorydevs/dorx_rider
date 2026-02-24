@@ -2,7 +2,7 @@ import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { useScannerSounds } from "@/components/ScannerSounds";
 import { useAppSelector } from "@/store/hooks";
 import axiosInstance from "@/utils/axiosInstance";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import moment from "moment";
@@ -11,7 +11,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 export default function HubScreen() {
   const router = useRouter();
   const { playSuccess, playError, playWarning } = useScannerSounds();
-  const [data, setData] = useState<string>("");
+  const [data, setData] = useState<any>("");
   const [scanned, setScanned] = useState(false);
   const user = useAppSelector((state: any) => state.user.user);
   const [userData, setUserData] = useState<any>(null);
@@ -22,7 +22,7 @@ export default function HubScreen() {
   const [alertColor, setAlertColor] = useState("blue");
   const [barangayDestination, setBarangayDestination] = useState("");
 
-  const onScan = async (scannedCode: string) => {
+  const onScan = async (scannedCode: any) => {
     if (scanned) return;
     console.log("scanned : >> ", scanned);
     setScanResultMessage("");
@@ -142,20 +142,23 @@ export default function HubScreen() {
 
   return (
     <View style={styles.container}>
-      <View
-        style={{ flexDirection: "row", alignItems: "center", paddingTop: 25 }}
-      >
+      <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <FontAwesome name="chevron-left" size={24} color="#3f6e6c" />
+          <Ionicons name="chevron-back" size={24} color="#3498db" />
         </TouchableOpacity>
-
-        <Text style={styles.title}>HUB</Text>
+        <View style={styles.headerTextContainer}>
+          <Text style={styles.title}>Hub Scanner</Text>
+          <Text style={styles.subtitle}>Pickup orders from hub</Text>
+        </View>
       </View>
 
-      <BarcodeScanner onScan={onScan} scanned={scanned} />
+      <View style={styles.scannerContainer}>
+        <BarcodeScanner onScan={onScan} scanned={scanned} />
+      </View>
+      
       <View style={styles.statusContainer}>
         <View
           style={[
@@ -171,17 +174,18 @@ export default function HubScreen() {
               : "Ready to Scan"}
         </Text>
       </View>
+      
       {scanResultMessage && (
-        <Text
-          style={{
-            textAlign: "center",
-            fontWeight: "bold",
-            fontSize: 17,
-            color: "red",
-          }}
-        >
-          {scanResultMessage}
-        </Text>
+        <View style={[styles.resultContainer, alertColor === "red" ? styles.errorBg : styles.successBg]}>
+          <Ionicons 
+            name={alertColor === "red" ? "close-circle" : "checkmark-circle"} 
+            size={20} 
+            color={alertColor === "red" ? "#e74c3c" : "#27ae60"} 
+          />
+          <Text style={[styles.resultText, alertColor === "red" ? styles.errorColor : styles.successColor]}>
+            {scanResultMessage}
+          </Text>
+        </View>
       )}
     </View>
   );
@@ -190,24 +194,91 @@ export default function HubScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    backgroundColor: "#f5f7fa",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingTop: 50,
+    paddingBottom: 16,
+    paddingHorizontal: 20,
+    backgroundColor: "#fff",
+  },
+  headerTextContainer: {
+    flex: 1,
   },
   backButton: {
     width: 40,
     height: 40,
     justifyContent: "center",
-    marginRight: -10,
+    alignItems: "center",
+    marginRight: 8,
   },
   title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    marginBottom: 8,
-    color: "#3f6e6c",
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#2c3e50",
   },
   subtitle: {
-    fontSize: 16,
-    opacity: 0.7,
-    marginBottom: 30,
+    fontSize: 13,
+    color: "#7f8c8d",
+    marginTop: 2,
+  },
+  scannerContainer: {
+    flex: 1,
+    margin: 20,
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+  statusContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+  },
+  statusIndicator: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 8,
+  },
+  statusText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#2c3e50",
+  },
+  resultContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  errorBg: {
+    backgroundColor: "#fee",
+    borderColor: "#fcc",
+  },
+  successBg: {
+    backgroundColor: "#d4edda",
+    borderColor: "#c3e6cb",
+  },
+  resultText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  errorColor: {
+    color: "#e74c3c",
+  },
+  successColor: {
+    color: "#27ae60",
   },
   content: {
     marginTop: 40,
@@ -220,25 +291,6 @@ const styles = StyleSheet.create({
     marginTop: 20,
     opacity: 0.8,
   },
-  statusContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 12,
-    paddingVertical: 8,
-  },
-  statusIndicator: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 8,
-  },
-  statusText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
-  },
-
   resultAlert: {
     marginTop: 10,
     marginHorizontal: 12,
@@ -247,5 +299,4 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     alignItems: "center",
   },
-  resultText: { fontSize: 14, fontWeight: "600", marginTop: 4 },
 });

@@ -1,12 +1,10 @@
 import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function HistoryScreen() {
   const router = useRouter();
   const handlePress = (type: "clients" | "customers") => {
-    console.log(`${type} card pressed`);
-    // you can navigate here later
-    // router.push(...)
     if (type === "clients") {
       router.push({
         pathname: "/history/clients",
@@ -20,30 +18,59 @@ export default function HistoryScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>History</Text>
-      <Text style={styles.description}>
-        Your transaction and activity history
-      </Text>
+      <View style={styles.headerSection}>
+        <View style={styles.headerContent}>
+          <View style={styles.headerIconContainer}>
+            <Ionicons name="time" size={24} color="#fff" />
+          </View>
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle}>History</Text>
+            <Text style={styles.headerSubtitle}>
+              Your transaction and activity history
+            </Text>
+          </View>
+        </View>
+      </View>
 
       <View style={styles.cardsContainer}>
-        {/* Card 1 */}
+        {/* Clients Card */}
         <Pressable
-          style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+          style={({ pressed }) => [
+            styles.card,
+            pressed && styles.cardPressed,
+          ]}
           onPress={() => handlePress("clients")}
         >
-          <Text style={styles.cardTitle}>Clients</Text>
-          <Text style={styles.cardDesc}>Transaction History From Clients</Text>
+          <View style={styles.cardIconContainer}>
+            <Ionicons name="business" size={32} color="#22c55e" />
+          </View>
+          <View style={styles.cardContent}>
+            <Text style={styles.cardTitle}>Clients</Text>
+            <Text style={styles.cardDesc}>
+              View transaction history from clients
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="#bdc3c7" />
         </Pressable>
 
-        {/* Card 2 */}
+        {/* Customers Card */}
         <Pressable
-          style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+          style={({ pressed }) => [
+            styles.card,
+            pressed && styles.cardPressed,
+          ]}
           onPress={() => handlePress("customers")}
         >
-          <Text style={styles.cardTitle}>Customers</Text>
-          <Text style={styles.cardDesc}>
-            Transaction History From Customers
-          </Text>
+          <View style={styles.cardIconContainer}>
+            <Ionicons name="people" size={32} color="#22c55e" />
+          </View>
+          <View style={styles.cardContent}>
+            <Text style={styles.cardTitle}>Customers</Text>
+            <Text style={styles.cardDesc}>
+              View transaction history from customers
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="#bdc3c7" />
         </Pressable>
       </View>
     </View>
@@ -53,42 +80,75 @@ export default function HistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    marginTop: 35,
+    backgroundColor: "#f5f7fa",
   },
-  title: {
+  headerSection: {
+    backgroundColor: "#22c55e",
+    paddingTop: 50,
+    paddingBottom: 24,
+    paddingHorizontal: 20,
+  },
+  headerContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+  },
+  headerIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  headerTextContainer: {
+    flex: 1,
+  },
+  headerTitle: {
     fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 4,
+    fontWeight: "700",
+    color: "#fff",
   },
-  description: {
-    fontSize: 16,
-    opacity: 0.7,
-    marginBottom: 20,
+  headerSubtitle: {
+    fontSize: 14,
+    color: "#d1fae5",
+    marginTop: 2,
   },
   cardsContainer: {
+    padding: 20,
     gap: 16,
   },
   card: {
     backgroundColor: "#fff",
     padding: 20,
-    borderRadius: 12,
-    elevation: 3, // Android shadow
-    shadowColor: "#000", // iOS shadow
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
+    borderRadius: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
   },
   cardPressed: {
-    opacity: 0.8,
+    transform: [{ scale: 0.98 }],
+  },
+  cardIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#f8f9fa",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  cardContent: {
+    flex: 1,
   },
   cardTitle: {
     fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 6,
+    fontWeight: "700",
+    color: "#2c3e50",
+    marginBottom: 4,
   },
   cardDesc: {
     fontSize: 14,
-    opacity: 0.7,
+    color: "#7f8c8d",
+    lineHeight: 20,
   },
 });

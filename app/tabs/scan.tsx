@@ -2,7 +2,7 @@ import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { useScannerSounds } from "@/components/ScannerSounds";
 import { useAppSelector } from "@/store/hooks";
 import axiosInstance from "@/utils/axiosInstance";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -18,7 +18,7 @@ export default function RTSIncomingScreen() {
   const router = useRouter();
 
   const { playSuccess, playError, playWarning } = useScannerSounds();
-  const [data, setData] = useState<string>("");
+  const [data, setData] = useState<any>("");
   const [scanned, setScanned] = useState(false);
   const user = useAppSelector((state: any) => state.user.user);
   const [userData, setUserData] = useState<any>(null);
@@ -27,10 +27,7 @@ export default function RTSIncomingScreen() {
   // const [waybillDetails, setWaybillDetails] = useState<any>([]);
   const [waybillDetails, setWaybillDetails] = useState<any>({});
 
-  const bottomDrawerRef = useRef<{
-    open: () => void;
-    close: () => void;
-  } | null>(null);
+  const bottomDrawerRef = useRef<any>(null);
 
   const InfoRow = ({
     label,
@@ -45,7 +42,14 @@ export default function RTSIncomingScreen() {
     </View>
   );
 
-  const onScan = async (scannedCode: string) => {
+  const SectionHeader = ({ icon, title }: { icon: string; title: string }) => (
+    <View style={styles.sectionHeader}>
+      <Ionicons name={icon as any} size={18} color="#22c55e" />
+      <Text style={styles.sectionTitle}>{title}</Text>
+    </View>
+  );
+
+  const onScan = async (scannedCode: any) => {
     if (scanned) return;
     setScanResultMessage("");
     setScanned(true);
@@ -73,8 +77,6 @@ export default function RTSIncomingScreen() {
         }
       } catch (error) {
         console.error("Error loading user data:", error);
-      } finally {
-        console.log("SUCCESS");
       }
     };
 
@@ -110,20 +112,23 @@ export default function RTSIncomingScreen() {
 
   return (
     <View style={styles.container}>
-      <View
-        style={{ flexDirection: "row", alignItems: "center", paddingTop: 25 }}
-      >
+      <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <FontAwesome name="chevron-left" size={24} color="#FF3B30" />
+          <Ionicons name="chevron-back" size={24} color="#22c55e" />
         </TouchableOpacity>
-
-        <Text style={styles.title}>Scan Items</Text>
+        <View style={styles.headerTextContainer}>
+          <Text style={styles.title}>Scan Items</Text>
+          <Text style={styles.subtitle}>Scan waybill or order number</Text>
+        </View>
       </View>
 
-      <BarcodeScanner onScan={onScan} scanned={scanned} />
+      <View style={styles.scannerContainer}>
+        <BarcodeScanner onScan={onScan} scanned={scanned} />
+      </View>
+      
       <View style={styles.statusContainer}>
         <View
           style={[
@@ -139,17 +144,12 @@ export default function RTSIncomingScreen() {
               : "Ready to Scan"}
         </Text>
       </View>
+      
       {scanResultMessage && (
-        <Text
-          style={{
-            textAlign: "center",
-            fontWeight: "bold",
-            fontSize: 17,
-            color: "red",
-          }}
-        >
-          {scanResultMessage}
-        </Text>
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle" size={20} color="#e74c3c" />
+          <Text style={styles.errorText}>{scanResultMessage}</Text>
+        </View>
       )}
 
       <BottomDrawer
@@ -157,9 +157,9 @@ export default function RTSIncomingScreen() {
         initialHeight={560}
         enableSnapping={false}
       >
+        <View style={styles.drawerHandle} />
         <ScrollView contentContainerStyle={styles.drawerContent}>
-          {/* SECTION: ITEM DETAILS */}
-          <Text style={styles.sectionTitle}>Item Details</Text>
+          <SectionHeader icon="cube" title="Item Details" />
 
           <InfoRow label="Item Name" value={waybillDetails.itemName} />
           <InfoRow label="Item Weight" value={waybillDetails.itemWeight} />
@@ -185,8 +185,7 @@ export default function RTSIncomingScreen() {
           <InfoRow label="Pouches Size" value={waybillDetails.pouchesSize} />
           <InfoRow label="Remarks" value={waybillDetails.remarks} />
 
-          {/* SECTION: WAYBILL DETAILS */}
-          <Text style={styles.sectionTitle}>Waybill Details</Text>
+          <SectionHeader icon="document-text" title="Waybill Details" />
 
           <InfoRow
             label="Waybill Number"
@@ -195,8 +194,7 @@ export default function RTSIncomingScreen() {
           <InfoRow label="Order Number" value={waybillDetails.orderNumber} />
           <InfoRow label="Status" value={waybillDetails.orderStatus} />
 
-          {/* SECTION: SENDER */}
-          <Text style={styles.sectionTitle}>Sender</Text>
+          <SectionHeader icon="person" title="Sender" />
 
           <InfoRow label="Name" value={waybillDetails.senderName} />
           <InfoRow label="Phone" value={waybillDetails.senderPhone} />
@@ -206,8 +204,7 @@ export default function RTSIncomingScreen() {
           />
           <InfoRow label="Address" value={waybillDetails.senderAddress} />
 
-          {/* SECTION: RECIPIENT */}
-          <Text style={styles.sectionTitle}>Recipient</Text>
+          <SectionHeader icon="location" title="Recipient" />
 
           <InfoRow label="Name" value={waybillDetails.receiverName} />
           <InfoRow label="Phone" value={waybillDetails.receiverPhone} />
@@ -225,24 +222,127 @@ export default function RTSIncomingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    backgroundColor: "#f5f7fa",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingTop: 50,
+    paddingBottom: 16,
+    paddingHorizontal: 20,
+    backgroundColor: "#fff",
   },
   backButton: {
     width: 40,
     height: 40,
     justifyContent: "center",
-    marginRight: -10,
+    alignItems: "center",
+    marginRight: 8,
+  },
+  headerTextContainer: {
+    flex: 1,
   },
   title: {
-    fontSize: 25,
-    fontWeight: "bold",
-    marginBottom: 8,
-    color: "#FF3B30",
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#2c3e50",
   },
   subtitle: {
+    fontSize: 13,
+    color: "#7f8c8d",
+    marginTop: 2,
+  },
+  scannerContainer: {
+    flex: 1,
+    margin: 20,
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+  statusContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+  },
+  statusIndicator: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 8,
+  },
+  statusText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#2c3e50",
+  },
+  errorContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    padding: 12,
+    backgroundColor: "#fee",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#fcc",
+  },
+  errorText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#e74c3c",
+    flex: 1,
+  },
+  drawerHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: "#e8ecf1",
+    borderRadius: 2,
+    alignSelf: "center",
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  drawerContent: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 20,
+    marginBottom: 12,
+  },
+  sectionTitle: {
     fontSize: 16,
-    opacity: 0.7,
-    marginBottom: 30,
+    fontWeight: "700",
+    color: "#2c3e50",
+  },
+  row: {
+    borderWidth: 1,
+    borderColor: "#e8ecf1",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    backgroundColor: "#fff",
+  },
+  label: {
+    fontSize: 11,
+    color: "#7f8c8d",
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  value: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#2c3e50",
   },
   content: {
     marginTop: 40,
@@ -255,25 +355,6 @@ const styles = StyleSheet.create({
     marginTop: 20,
     opacity: 0.8,
   },
-  statusContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 12,
-    paddingVertical: 8,
-  },
-  statusIndicator: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 8,
-  },
-  statusText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
-  },
-
   resultAlert: {
     marginTop: 10,
     marginHorizontal: 12,
@@ -283,32 +364,4 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   resultText: { fontSize: 14, fontWeight: "600", marginTop: 4 },
-  drawerContent: {
-    padding: 16,
-    paddingBottom: 40,
-    marginBottom: 65,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginTop: 20,
-    marginBottom: 10,
-  },
-  row: {
-    borderWidth: 1,
-    borderColor: "#e5e5e5",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 10,
-    backgroundColor: "#fff",
-  },
-  label: {
-    fontSize: 12,
-    color: "#666",
-    marginBottom: 4,
-  },
-  value: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
 });
