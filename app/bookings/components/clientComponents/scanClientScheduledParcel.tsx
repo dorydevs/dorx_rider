@@ -162,7 +162,7 @@ export default function scanClientScheduledParcel() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <FontAwesome name="chevron-left" size={24} color="#007AFF" />
+          <FontAwesome name="chevron-left" size={24} color="#22c55e" />
         </TouchableOpacity>
 
         <Text style={styles.title}>Client Scheduled to Pick up</Text>
@@ -173,7 +173,7 @@ export default function scanClientScheduledParcel() {
             padding: 20,
             marginTop: 20,
             borderRadius: 12,
-            backgroundColor: "#294983",
+            backgroundColor: "#22c55e",
             elevation: 2,
             flexDirection: "row",
             justifyContent: "space-between",
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "bold",
 
-    color: "#50a3fc",
+    color: "#22c55e",
   },
   subtitle: {
     fontSize: 16,

@@ -7,12 +7,16 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import * as yup from "yup";
 
 const validationSchema = yup.object({
@@ -83,88 +87,111 @@ export default function LoginScreen() {
   };
 
   return (
+    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+        <View style={styles.content}>
+          <Text style={styles.title}>DORY EXPRESS RIDERS</Text>
+          <Text style={styles.subtitle}>Sign in to your account</Text>
 
-    <View style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>DORY EXPRESS RIDERS</Text>
-        <Text style={styles.subtitle}>Sign in to your account</Text>
-
-        <View style={styles.form}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Username</Text>
-            <Controller
-              control={control}
-              name="username"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <TextInput
-                  style={[
-                    styles.input,
-                    errors.username && styles.inputError,
-                  ]}
-                  placeholder="Enter your username"
-                  placeholderTextColor="#6b7280"
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  keyboardType="default"
-                  autoCapitalize="none"
-                  editable={!loading}
-                />
+          <View style={styles.form}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Username</Text>
+              <Controller
+                control={control}
+                name="username"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <TextInput
+                    style={[
+                      styles.input,
+                      errors.username && styles.inputError,
+                    ]}
+                    placeholder="Enter your username"
+                    placeholderTextColor="#6b7280"
+                    value={value}
+                    onChangeText={onChange}
+                    onBlur={onBlur}
+                    keyboardType="default"
+                    autoCapitalize="none"
+                    editable={!loading}
+                  />
+                )}
+              />
+              {errors.username && (
+                <Text style={styles.fieldError}>{errors.username.message}</Text>
               )}
-            />
-            {errors.username && (
-              <Text style={styles.fieldError}>{errors.username.message}</Text>
-            )}
-          </View>
+            </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password</Text>
-            <Controller
-              control={control}
-              name="password"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <TextInput
-                  style={[
-                    styles.input,
-                    errors.password && styles.inputError,
-                  ]}
-                  placeholder="Enter your password"
-                  placeholderTextColor="#6b7280"
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  secureTextEntry
-                  editable={!loading}
-                />
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Password</Text>
+              <Controller
+                control={control}
+                name="password"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <TextInput
+                    style={[
+                      styles.input,
+                      errors.password && styles.inputError,
+                    ]}
+                    placeholder="Enter your password"
+                    placeholderTextColor="#6b7280"
+                    value={value}
+                    onChangeText={onChange}
+                    onBlur={onBlur}
+                    secureTextEntry
+                    editable={!loading}
+                  />
+                )}
+              />
+              {errors.password && (
+                <Text style={styles.fieldError}>{errors.password.message}</Text>
               )}
-            />
-            {errors.password && (
-              <Text style={styles.fieldError}>{errors.password.message}</Text>
+            </View>
+            {error !== null && (
+              <Text style={{ color: "tomato", padding: 10, textAlign: "center" }}>
+                {error}
+              </Text>
             )}
+            <TouchableOpacity
+              style={styles.button}
+              onPress={handleSubmit(onSubmit)}
+              disabled={loading}
+            >
+              <Text style={styles.buttonText}>
+                {loading ? "Signing in..." : "Sign In"}
+              </Text>
+            </TouchableOpacity>
           </View>
-          {error !== null && (
-            <Text style={{ color: "tomato", padding: 10, textAlign: "center" }}>
-              {error}
-            </Text>
-          )}
-          <TouchableOpacity
-            style={styles.button}
-            onPress={handleSubmit(onSubmit)}
-            disabled={loading}
-          >
-            <Text style={styles.buttonText}>
-              {loading ? "Signing in..." : "Sign In"}
-            </Text>
-          </TouchableOpacity>
         </View>
-      </View>
-    </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+  },
   container: {
     flex: 1,
+    backgroundColor: "#ffffff",
+  },
+  scrollView: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: "center",
     paddingHorizontal: 20,
     backgroundColor: "#ffffff",

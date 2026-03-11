@@ -5,7 +5,7 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useIsFocused } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { groupBy, sortBy } from "lodash";
+import { groupBy, sortBy } from "lodash"; 
 import moment from "moment";
 import { useEffect, useState } from "react";
 import {
@@ -167,7 +167,7 @@ export default function clientScheduledToPickUp() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <FontAwesome name="chevron-left" size={24} color="#007AFF" />
+          <FontAwesome name="chevron-left" size={24} color="#22c55e" />
         </TouchableOpacity>
 
         <Text style={styles.title}>Client Scheduled to Pick up</Text>
@@ -178,7 +178,7 @@ export default function clientScheduledToPickUp() {
             padding: 20,
             marginTop: 20,
             borderRadius: 12,
-            backgroundColor: "#294983",
+            backgroundColor: "#22c55e",
             elevation: 2,
             flexDirection: "row",
             justifyContent: "space-between",
@@ -209,7 +209,7 @@ export default function clientScheduledToPickUp() {
       </View>
       {loading ? (
         <View style={{ padding: 20 }}>
-          <ActivityIndicator size="large" />
+          <ActivityIndicator size="large" color="#22c55e" />
         </View>
       ) : (
         <FlatList
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "bold",
 
-    color: "#50a3fc",
+    color: "#22c55e",
   },
   subtitle: {
     fontSize: 16,

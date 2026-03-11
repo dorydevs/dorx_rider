@@ -83,7 +83,7 @@ export default function ClientScreen() {
           </View>
           <View>
             <Text style={{ opacity: 0.5, fontSize: 13 }}>
-              Total : {client.total}
+              Total Items: : {client.total}
             </Text>
           </View>
         </View>
@@ -119,7 +119,7 @@ export default function ClientScreen() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <FontAwesome name="chevron-left" size={24} color="#007AFF" />
+          <FontAwesome name="chevron-left" size={24} color="#22c55e" />
         </TouchableOpacity>
 
         <Text style={styles.title}>Client Pick Up Addresses</Text>
@@ -131,7 +131,7 @@ export default function ClientScreen() {
             padding: 20,
             marginTop: 20,
             borderRadius: 12,
-            backgroundColor: "#294983",
+            backgroundColor: "#22c55e",
             elevation: 2,
             flexDirection: "row",
             justifyContent: "space-between",
@@ -160,7 +160,7 @@ export default function ClientScreen() {
 
       {loadingClientData ? (
         <View style={{ padding: 20 }}>
-          <ActivityIndicator size="large" />
+          <ActivityIndicator size="large" color="#22c55e" />
         </View>
       ) : error ? (
         <View>
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "bold",
 
-    color: "#50a3fc",
+    color: "#22c55e",
   },
   subtitle: {
     fontSize: 16,
