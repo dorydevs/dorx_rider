@@ -92,7 +92,7 @@ export default function ClientScreen() {
         activeOpacity={0.7}
       >
         <View style={styles.cardIconContainer}>
-          <Ionicons name="business" size={22} color="#3498db" />
+          <Ionicons name="business" size={22} color="#22c55e" />
         </View>
         <View style={styles.cardContent}>
           <Text style={styles.cardTitle}>{item.clientName}</Text>
@@ -115,7 +115,7 @@ export default function ClientScreen() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Ionicons name="chevron-back" size={24} color="#3498db" />
+          <Ionicons name="chevron-back" size={24} color="#22c55e" />
         </TouchableOpacity>
         <View style={styles.headerTextContainer}>
           <Text style={styles.title}>Client Bookings</Text>
@@ -125,7 +125,7 @@ export default function ClientScreen() {
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3498db" />
+          <ActivityIndicator size="large" color="#22c55e" />
           <Text style={styles.loadingText}>Loading bookings...</Text>
         </View>
       ) : error ? (
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#ebf5fb",
+    backgroundColor: "#dcfce7",
     justifyContent: "center",
     alignItems: "center",
   },
