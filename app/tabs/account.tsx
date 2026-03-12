@@ -122,19 +122,16 @@ export default function AccountScreen() {
           )}
         </View>
 
-        {userData?.assignedBarangays && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="location" size={18} color="#22c55e" />
-              <Text style={styles.sectionTitle}>Assigned Pickup Areas</Text>
-            </View>
-            <View style={styles.pillsContainer}>
-              {JSON.parse(userData.assignedBarangays).map(
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Pickup Areas</Text>
+          {userData !== null && (
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+              {(userData?.assignedBarangays).map(
                 (area: string, index: number) => (
-                  <View key={index} style={styles.pill}>
-                    <Text style={styles.pillText}>{area}</Text>
-                  </View>
-                )
+                  <Text key={index} style={styles.pills}>
+                    {area}
+                  </Text>
+                ),
               )}
             </View>
           </View>

@@ -26,6 +26,8 @@ export default function ClientScreen() {
   const dispatch = useAppDispatch();
   const user = useAppSelector((state: any) => state.user.user);
   const [userData, setUserData] = useState<any>(null);
+  const [remittanceCheckerData, setRemittanceCheckerData] =
+    useState<boolean>(false);
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -57,9 +59,36 @@ export default function ClientScreen() {
           setLoading(true);
           setError(null);
           try {
-            const response = await axiosInstance(userData.token).get(
-              `/api/riderTransaction/clientBookings?hubCity=${userData?.storeCity}&riderId=${userData?.id}$groupArea=${userData?.assignedBarangays}`,
+            const soRemittanceChecker = await axiosInstance(userData.token).get(
+              `/api/so_remittance_checker?soId=${userData?.storeId}`,
             );
+
+            let hasDateDeliveredNotToday = false;
+            console.log("NATAWAG");
+            if (soRemittanceChecker.data.toRemitData.length !== 0) {
+              const today = new Date();
+              hasDateDeliveredNotToday =
+                soRemittanceChecker.data.toRemitData.some((item: any) => {
+                  if (!item?.dateDelivered) return false;
+                  const deliveredDate = new Date(item.dateDelivered);
+
+                  return deliveredDate.toDateString() !== today.toDateString();
+                });
+            }
+            console.log("NATAWAG 02");
+
+            // Paki balik sa true
+            if (hasDateDeliveredNotToday) {
+              setRemittanceCheckerData(false);
+            } else {
+              const response = await axiosInstance(userData.token).get(
+                `/api/riderTransaction/clientBookings?province=${userData?.storeProvince}&hubCity=${userData?.storeCity}&riderId=${userData?.id}$groupArea=${JSON.stringify(userData?.assignedBarangays)}&accountType=${userData.accountType}`,
+              );
+              console.log("clientBookings response:", response.data);
+              setRemittanceCheckerData(false);
+              setclientData(response.data.result);
+            }
+            setLoading(false);
             
             setclientData(response.data.result);
           } catch (err: any) {
@@ -133,6 +162,20 @@ export default function ClientScreen() {
           <Ionicons name="alert-circle" size={48} color="#e74c3c" />
           <Text style={styles.errorText}>Something went wrong</Text>
           <Text style={styles.errorSubtext}>{error}</Text>
+        </View>
+      ) : remittanceCheckerData ? (
+        <View style={styles.remittanceContainer}>
+          <View style={styles.remittanceCard}>
+            <FontAwesome name="exclamation-circle" size={22} color="red" />
+            <Text style={styles.remittanceTitle}>Remittance Required</Text>
+            <Text style={styles.remittanceMessage}>
+              Remittance balance must be remitted before you can access client
+              bookings.
+            </Text>
+            <Text style={styles.remittanceSupport}>
+              Please contact your Satellite Operator.
+            </Text>
+          </View>
         </View>
       ) : (
         <FlatList
@@ -276,5 +319,40 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 20,
     opacity: 0.8,
+  },
+  remittanceContainer: {
+    marginTop: 45,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 12,
+  },
+  remittanceCard: {
+    width: "100%",
+    maxWidth: 760,
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    elevation: 2,
+  },
+  remittanceTitle: {
+    marginTop: 10,
+    fontSize: 18,
+    fontWeight: "700",
+    color: "red",
+  },
+  remittanceMessage: {
+    marginTop: 8,
+    fontSize: 14,
+    textAlign: "center",
+    color: "red",
+    lineHeight: 20,
+  },
+  remittanceSupport: {
+    marginTop: 6,
+    fontSize: 13,
+    textAlign: "center",
+    color: "red",
   },
 });
