@@ -11,7 +11,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 export default function HubScreen() {
   const router = useRouter();
   const { playSuccess, playError, playWarning } = useScannerSounds();
-  const [data, setData] = useState<string>("");
+  const [data, setData] = useState<any>("");
   const [scanned, setScanned] = useState(false);
   const user = useAppSelector((state: any) => state.user.user);
   const [userData, setUserData] = useState<any>(null);
@@ -21,8 +21,11 @@ export default function HubScreen() {
   const [scannedData, setScannedData] = useState<string[]>([]);
   const [alertColor, setAlertColor] = useState("blue");
   const [barangayDestination, setBarangayDestination] = useState("");
+  const [remittanceCheckerData, setRemittanceCheckerData] =
+    useState<boolean>(false);
+  const [remittanceLoading, setRemittanceLoading] = useState<boolean>(false);
 
-  const onScan = async (scannedCode: string) => {
+  const onScan = async (scannedCode: any) => {
     if (scanned) return;
     console.log("scanned : >> ", scanned);
     setScanResultMessage("");
@@ -49,7 +52,8 @@ export default function HubScreen() {
           if (
             orderDetail.data.orderStatus === "Received by branch" &&
             orderDetail.data.waybillStatus === "In Transit" &&
-            orderDetail.data?.hubTransaction.origin === "Provincial Office"
+            orderDetail.data?.hubTransaction.origin === "Provincial Office" &&
+            orderDetail.data.receiverCity === userData.storeCity
           ) {
             const scanPayload = {
               orderNumber: data.data,
@@ -140,6 +144,40 @@ export default function HubScreen() {
     loadUserData();
   }, [user]);
 
+  useEffect(() => {
+    const remittanceChecker = async () => {
+      try {
+        setRemittanceLoading(true);
+        const soRemittanceChecker = await axiosInstance(userData.token).get(
+          `/api/so_remittance_checker?soId=${userData?.storeId}`,
+        );
+
+        if (soRemittanceChecker.data.toRemitData.length !== 0) {
+          const today = new Date();
+          const hasDateDeliveredNotToday =
+            soRemittanceChecker.data.toRemitData.some((item: any) => {
+              if (!item?.dateDelivered) return false;
+              const deliveredDate = new Date(item.dateDelivered);
+
+              return deliveredDate.toDateString() !== today.toDateString();
+            });
+
+          setRemittanceCheckerData(!hasDateDeliveredNotToday);
+        }
+
+        setRemittanceLoading(false);
+      } catch (error) {
+        setRemittanceLoading(false);
+        console.log("RIDER REMITTANCE CHECKER ERROR:", error);
+      }
+    };
+    if (userData !== null) {
+      remittanceChecker();
+    }
+  }, [userData]);
+
+  console.log("remittanceCheckerData : >> ", remittanceCheckerData);
+
   return (
     <View style={styles.container}>
       <View
@@ -155,33 +193,55 @@ export default function HubScreen() {
         <Text style={styles.title}>HUB</Text>
       </View>
 
-      <BarcodeScanner onScan={onScan} scanned={scanned} />
-      <View style={styles.statusContainer}>
-        <View
-          style={[
-            styles.statusIndicator,
-            { backgroundColor: scanned ? "#ef4444" : "#22c55e" },
-          ]}
-        />
-        <Text style={styles.statusText}>
-          {loadingScan
-            ? "Processing..."
-            : scanned
-              ? "Camera Locked"
-              : "Ready to Scan"}
-        </Text>
-      </View>
-      {scanResultMessage && (
-        <Text
-          style={{
-            textAlign: "center",
-            fontWeight: "bold",
-            fontSize: 17,
-            color: "red",
-          }}
-        >
-          {scanResultMessage}
-        </Text>
+      {remittanceLoading ? (
+        <View style={styles.skeletonContainer}>
+          <View style={styles.skeletonSquare} />
+        </View>
+      ) : remittanceCheckerData ? (
+        <View style={styles.remittanceContainer}>
+          <View style={styles.remittanceCard}>
+            <FontAwesome name="exclamation-circle" size={22} color="red" />
+            <Text style={styles.remittanceTitle}>Remittance Required</Text>
+            <Text style={styles.remittanceMessage}>
+              Remittance balance must be remitted before you can access client
+              bookings.
+            </Text>
+            <Text style={styles.remittanceSupport}>
+              Please contact your Satellite Operator.
+            </Text>
+          </View>
+        </View>
+      ) : (
+        <>
+          <BarcodeScanner onScan={onScan} scanned={scanned} />
+          <View style={styles.statusContainer}>
+            <View
+              style={[
+                styles.statusIndicator,
+                { backgroundColor: scanned ? "#ef4444" : "#22c55e" },
+              ]}
+            />
+            <Text style={styles.statusText}>
+              {loadingScan
+                ? "Processing..."
+                : scanned
+                  ? "Camera Locked"
+                  : "Ready to Scan"}
+            </Text>
+          </View>
+          {scanResultMessage && (
+            <Text
+              style={{
+                textAlign: "center",
+                fontWeight: "bold",
+                fontSize: 17,
+                color: alertColor,
+              }}
+            >
+              {scanResultMessage}
+            </Text>
+          )}
+        </>
       )}
     </View>
   );
@@ -238,7 +298,52 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#333",
   },
-
+  skeletonContainer: {
+    marginTop: 30,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  skeletonSquare: {
+    width: 300,
+    height: 300,
+    borderRadius: 10,
+    backgroundColor: "#e5e7eb",
+  },
+  remittanceContainer: {
+    marginTop: 30,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 12,
+  },
+  remittanceCard: {
+    width: "100%",
+    maxWidth: 760,
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    elevation: 2,
+  },
+  remittanceTitle: {
+    marginTop: 10,
+    fontSize: 18,
+    fontWeight: "700",
+    color: "red",
+  },
+  remittanceMessage: {
+    marginTop: 8,
+    fontSize: 14,
+    textAlign: "center",
+    color: "red",
+    lineHeight: 20,
+  },
+  remittanceSupport: {
+    marginTop: 6,
+    fontSize: 13,
+    textAlign: "center",
+    color: "red",
+  },
   resultAlert: {
     marginTop: 10,
     marginHorizontal: 12,

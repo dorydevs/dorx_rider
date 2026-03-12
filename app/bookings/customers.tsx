@@ -233,9 +233,7 @@ export default function CustomersScreen() {
           // validation: delivery area (barangay) should be same as the parcel destination barangay
           if (waybillData.waybillStatus === "Delivering") {
             if (
-              JSON.parse(userData.assignedBarangays).includes(
-                waybillData.receiverBarangay,
-              )
+              userData.assignedBarangays.includes(waybillData.receiverBarangay)
             ) {
               playSuccess();
               setLoadingScan(false);
@@ -888,7 +886,7 @@ const styles = StyleSheet.create({
   },
   coordContainer: {
     position: "absolute",
-    top: 22,
+    top: 300,
     left: 20,
     backgroundColor: "rgba(0, 0, 0, 0.34)",
     padding: 5,

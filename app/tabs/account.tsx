@@ -114,12 +114,12 @@ export default function AccountScreen() {
           <Text style={styles.sectionTitle}>Pickup Areas</Text>
           {userData !== null && (
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-              {JSON.parse(userData?.assignedBarangays).map(
+              {(userData?.assignedBarangays).map(
                 (area: string, index: number) => (
                   <Text key={index} style={styles.pills}>
                     {area}
                   </Text>
-                )
+                ),
               )}
             </View>
           )}

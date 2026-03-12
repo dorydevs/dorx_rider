@@ -42,7 +42,7 @@ export default function scanClientScheduledParcel() {
     ? JSON.parse(ScheduledData as string)
     : null;
   const [selectedItem, setSelectedItem] = useState<ClientData | null>(null);
-  const [data, setData] = useState<string>("");
+  const [data, setData] = useState<any>("");
   const [scanned, setScanned] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingScan, setLoadingScan] = useState(false);
@@ -67,7 +67,7 @@ export default function scanClientScheduledParcel() {
 
   console.log(clientScheduledData);
 
-  const onScan = async (scannedCode: string) => {
+  const onScan = async (scannedCode: any) => {
     if (scanned) return;
 
     setScanned(true);
@@ -92,6 +92,8 @@ export default function scanClientScheduledParcel() {
 
     loadUserData();
   }, [user]);
+
+  console.log("userInfo : >> ", userData);
 
   console.log("client : >> ", clientScheduledToPickUp);
 
@@ -140,7 +142,7 @@ export default function scanClientScheduledParcel() {
                 status: "picked-up",
                 scannedDate: moment().format("YYYY-MM-DD hh:mm:ss"),
                 riderId: userData.id,
-                orderTransactionId: orderTransaction?.orderTransactionId,
+                orderTransactionId: validationResponse?.data.orderTransactionId,
               };
 
               // // create store inbound scanning transaction
@@ -161,14 +163,16 @@ export default function scanClientScheduledParcel() {
                   shippingFee: validationResponse.data.receivableFreight,
                   transactionType: "inbound",
                   wareHouseId: userData.storeId,
-                  wareHouseType: "store",
-                  orderTransactionId: orderTransaction?.orderTransactionId,
+                  wareHouseType:
+                    userData.accountType === 0 ? "store" : "hub-rider",
+                  orderTransactionId:
+                    validationResponse.data.orderTransactionId,
                 },
               );
               console.log(">>> logScanData:", logScanData);
 
               playSuccess();
-              setTotalPendingCount((prev) => prev - 1);
+              setTotalPendingCount((prev: any) => prev - 1);
               //   setTotalScannedCount((prev) => prev + 1);
 
               setAlertColor("green");
