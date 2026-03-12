@@ -94,246 +94,165 @@ export default function scanClientScheduledParcel() {
   console.log("client : >> ", clientScheduledToPickUp);
 
   useEffect(() => {
-    async function processScan() {
-      if (!data) return;
+  async function processScan() {
+    if (!data) return;
 
-      if (!scannedData.includes(data.data)) {
-        setLoadingScan(true);
+    if (scannedData.includes(data.data)) {
+      setScanResultMessage("⚠ This item has already been scanned.");
+      setAlertColor("yellow");
+      playWarning();
+      setTimeout(() => {
         setScanResultMessage("");
+        setScanned(false);
+        setData("");
+      }, 3000);
+      return;
+    }
 
-        try {
-          // Validate order number
-          const validationResponse = await axiosInstance(userData?.token).get(
-            `/api/orderTransactions/fetchOrderTransactionByOrderNumber?orderNumber=${data.data}&clientId=${client.clientId}&pickupAddressId=${clientScheduledToPickUp.pickupAddressId}`,
-          );
-          if (validationResponse.data) {
-            console.log("RESUSLT : >>> ", validationResponse.data);
-            setSelectedItem(validationResponse.data);
+    setLoadingScan(true);
+    setScanResultMessage("");
 
-            // validate: only waybills that has status of scheduled-for-pickup are allowed to scan
-            if (
-              validationResponse.data.orderStatus !== "Scheduled for Pickup"
-            ) {
-              setScanResultMessage(
-                "Waybills that have the status of 'printed' and 'scheduled-for-pickup' are only allowed to scan.",
-              );
-              setAlertColor("yellow");
-              //   notAllowed = true;
-              //   playWarningSound();
-              setLoadingScan(false);
-              return;
-            } else {
-              // scan waybill
-              // setWaybillBelongsToSelectedPickupAdd(true);
+    try {
+      // Validate order number
+      const validationResponse = await axiosInstance(userData?.token).get(
+        `/api/orderTransactions/fetchOrderTransactionByOrderNumber?orderNumber=${data.data}&clientId=${client.clientId}&pickupAddressId=${clientScheduledToPickUp.pickupAddressId}`,
+      );
 
-              const scanPayload = {
-                orderNumber: data.data,
-                status: "Picked up by Rider",
-              };
-              const orderTransaction = clientScheduledData.orders.find(
-                (d: any) => d.orderNumber === data,
-              );
+      if (!validationResponse.data) {
+        throw new Error("Order not found. Please check the waybill number.");
+      }
 
-              const transactionPayload = {
-                status: "picked-up",
-                scannedDate: moment().format("YYYY-MM-DD hh:mm:ss"),
-                riderId: userData.id,
-                orderTransactionId: validationResponse?.data.orderTransactionId,
-              };
+      setSelectedItem(validationResponse.data);
 
-              // // create store inbound scanning transaction
-              await axiosInstance(userData.token).post(
-                `/api/riderTransaction`,
-                transactionPayload,
-              );
-              // update order status
-              const scanResponse = await axiosInstance(userData.token).put(
-                `/api/orderTransactions/scanWaybill`,
-                scanPayload,
-              );
-
-              // log scanned data for cds
-              const logScanData = await axiosInstance(userData.token).post(
-                `/api/log-scan`,
-                {
-                  shippingFee: validationResponse.data.receivableFreight,
-                  transactionType: "inbound",
-                  wareHouseId: userData.storeId,
-                  wareHouseType:
-                    userData.accountType === 0 ? "store" : "hub-rider",
-                  orderTransactionId:
-                    validationResponse.data.orderTransactionId,
-                },
-              );
-              console.log(">>> logScanData:", logScanData);
-
-              playSuccess();
-              setTotalPendingCount((prev: any) => prev - 1);
-              //   setTotalScannedCount((prev) => prev + 1);
-
-              setAlertColor("green");
-
-              setScannedData((prev) => [...prev, data]);
-              setScanResultMessage(
-                scanResponse.data.message ?? "Successfully Scanned!",
-              );
-              bottomDrawerRef.current?.open();
-
-              // send scanned data to hub
-              // socket.emit("send_rider_scanned_inbound_waybill", {
-              //   data: {
-              //     clientId: client.clientId,
-              //     orderNumber: data,
-              //   },
-              // });
-            }
-          } else {
-            setScanResultMessage("Invalid.");
-            setAlertColor("red");
-          if (!validationResponse.data) {
-            throw new Error("Order not found. Please check the waybill number.");
-          }
-
-          setSelectedItem(validationResponse.data);
-
-          // Validate order status
-          if (validationResponse.data.orderStatus !== "Scheduled for Pickup") {
-            setScanResultMessage(
-              `Cannot scan: Order status is "${validationResponse.data.orderStatus}". Only orders with "Scheduled for Pickup" status can be scanned.`,
-            );
-            setAlertColor("yellow");
-            playWarning();
-            setLoadingScan(false);
-            setTimeout(() => {
-              setScanResultMessage("");
-              setScanned(false);
-              setData("");
-            }, 4000);
-            return;
-          }
-
-          // Find order transaction
-          const orderTransaction = clientScheduledData.orders.find(
-            (d: any) => d.orderNumber === data.data,
-          );
-
-          if (!orderTransaction) {
-            setScanResultMessage(
-              "Order not found in scheduled pickup list. Please refresh and try again.",
-            );
-            setAlertColor("yellow");
-            playWarning();
-            setLoadingScan(false);
-            setTimeout(() => {
-              setScanResultMessage("");
-              setScanned(false);
-              setData("");
-            }, 4000);
-            return;
-          }
-
-          // Prepare payloads
-          const scanPayload = {
-            orderNumber: data.data,
-            status: "Picked up by Rider",
-          };
-
-          const transactionPayload = {
-            status: "picked-up",
-            scannedDate: moment().format("YYYY-MM-DD HH:mm:ss"),
-            riderId: userData.id,
-            orderTransactionId: orderTransaction.orderTransactionId,
-          };
-
-          // Create rider transaction
-          await axiosInstance(userData.token).post(
-            `/api/riderTransaction`,
-            transactionPayload,
-          );
-
-          // Update order status
-          const scanResponse = await axiosInstance(userData.token).put(
-            `/api/orderTransactions/scanWaybill`,
-            scanPayload,
-          );
-
-          // Log scanned data for CDS
-          await axiosInstance(userData.token).post(
-            `/api/log-scan`,
-            {
-              shippingFee: validationResponse.data.receivableFreight,
-              transactionType: "inbound",
-              wareHouseId: userData.storeId,
-              wareHouseType: "store",
-              orderTransactionId: orderTransaction.orderTransactionId,
-            },
-          );
-
-          playSuccess();
-          setTotalPendingCount((prev) => prev - 1);
-          setAlertColor("green");
-          setScannedData((prev) => [...prev, data.data]);
-          setScanResultMessage(
-            scanResponse.data.message ?? `✓ Successfully scanned! ${totalPendingCount - 1} items remaining.`,
-          );
-          bottomDrawerRef.current?.open();
-          
-          setTimeout(() => {
-            setScanned(false);
-            setData("");
-          }, 2000);
-
-        } catch (error: any) {
-          console.error("CLIENT SCANNING ERROR:", error);
-          playError();
-          setAlertColor("red");
-          setLoadingScan(false);
-          
-          let errorMessage = "Scanning failed. ";
-          
-          if (error.message === "Network Error" || !error.response) {
-            errorMessage += "Network connection error. Please check your internet and try again.";
-          } else if (error.response?.status === 404) {
-            errorMessage += "Order not found or not assigned to this pickup address.";
-          } else if (error.response?.status === 400) {
-            errorMessage += error.response?.data?.message || "Invalid request. Please check the order details.";
-          } else if (error.response?.status === 401) {
-            errorMessage += "Session expired. Please log in again.";
-          } else if (error.response?.status === 409) {
-            errorMessage += "This order has already been processed.";
-          } else if (error.response?.data?.message) {
-            errorMessage += error.response.data.message;
-          } else if (error.message) {
-            errorMessage += error.message;
-          } else {
-            errorMessage += "Unknown error occurred. Please try again.";
-          }
-          
-          setScanResultMessage(errorMessage);
-          setTimeout(() => {
-            setScanResultMessage("");
-            setScanned(false);
-            setData("");
-          }, 5000);
-        } finally {
-          setLoadingScan(false);
-        }
-      } else {
-        setScanResultMessage("⚠ This item has already been scanned.");
+      // Validate order status
+      if (validationResponse.data.orderStatus !== "Scheduled for Pickup") {
+        setScanResultMessage(
+          `Cannot scan: Order status is "${validationResponse.data.orderStatus}". Only orders with "Scheduled for Pickup" status can be scanned.`,
+        );
         setAlertColor("yellow");
         playWarning();
+        setLoadingScan(false);
         setTimeout(() => {
           setScanResultMessage("");
           setScanned(false);
           setData("");
-        }, 3000);
+        }, 4000);
+        return;
       }
+
+      // Find order transaction
+      const orderTransaction = clientScheduledData.orders.find(
+        (d: any) => d.orderNumber === data.data,
+      );
+
+      if (!orderTransaction) {
+        setScanResultMessage(
+          "Order not found in scheduled pickup list. Please refresh and try again.",
+        );
+        setAlertColor("yellow");
+        playWarning();
+        setLoadingScan(false);
+        setTimeout(() => {
+          setScanResultMessage("");
+          setScanned(false);
+          setData("");
+        }, 4000);
+        return;
+      }
+
+      // Prepare payloads
+      const scanPayload = {
+        orderNumber: data.data,
+        status: "Picked up by Rider",
+      };
+
+      const transactionPayload = {
+        status: "picked-up",
+        scannedDate: moment().format("YYYY-MM-DD HH:mm:ss"),
+        riderId: userData.id,
+        orderTransactionId: validationResponse.data.orderTransactionId,
+      };
+
+      // Create rider transaction
+      await axiosInstance(userData.token).post(
+        `/api/riderTransaction`,
+        transactionPayload,
+      );
+
+      // Update order status
+      const scanResponse = await axiosInstance(userData.token).put(
+        `/api/orderTransactions/scanWaybill`,
+        scanPayload,
+      );
+
+      // Log scanned data for CDS
+      await axiosInstance(userData.token).post(
+        `/api/log-scan`,
+        {
+          shippingFee: validationResponse.data.receivableFreight,
+          transactionType: "inbound",
+          wareHouseId: userData.storeId,
+          wareHouseType: userData.accountType === 0 ? "store" : "hub-rider",
+          orderTransactionId: validationResponse.data.orderTransactionId,
+        },
+      );
+
+      playSuccess();
+      setTotalPendingCount((prev: any) => prev - 1);
+      setAlertColor("green");
+      setScannedData((prev) => [...prev, data.data]);
+      setScanResultMessage(
+        scanResponse.data.message ?? `✓ Successfully scanned! ${totalPendingCount - 1} items remaining.`,
+      );
+      bottomDrawerRef.current?.open();
+
+      setTimeout(() => {
+        setScanned(false);
+        setData("");
+      }, 2000);
+
+    } catch (error: any) {
+      console.error("CLIENT SCANNING ERROR:", error);
+      playError();
+      setAlertColor("red");
+
+      let errorMessage = "Scanning failed. ";
+
+      if (error.message === "Network Error" || !error.response) {
+        errorMessage += "Network connection error. Please check your internet and try again.";
+      } else if (error.response?.status === 404) {
+        errorMessage += "Order not found or not assigned to this pickup address.";
+      } else if (error.response?.status === 400) {
+        errorMessage += error.response?.data?.message || "Invalid request. Please check the order details.";
+      } else if (error.response?.status === 401) {
+        errorMessage += "Session expired. Please log in again.";
+      } else if (error.response?.status === 409) {
+        errorMessage += "This order has already been processed.";
+      } else if (error.response?.data?.message) {
+        errorMessage += error.response.data.message;
+      } else if (error.message) {
+        errorMessage += error.message;
+      } else {
+        errorMessage += "Unknown error occurred. Please try again.";
+      }
+
+      setScanResultMessage(errorMessage);
+      setTimeout(() => {
+        setScanResultMessage("");
+        setScanned(false);
+        setData("");
+      }, 5000);
+
+    } finally {
+      setLoadingScan(false);
     }
-    if (userData !== null) {
-      processScan();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, userData]);
+  }
+
+  if (userData !== null) {
+    processScan();
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [data, userData]);
 
   const bottomDrawerClose = () => {
     if (totalPendingCount === 0) {

@@ -90,7 +90,7 @@ export default function ClientScreen() {
             }
             setLoading(false);
             
-            setclientData(response.data.result);
+  
           } catch (err: any) {
             console.error("Failed to load client clientData:", err);
             setError(err?.message ?? "Failed to load clientData");
@@ -147,7 +147,7 @@ export default function ClientScreen() {
           <Ionicons name="chevron-back" size={24} color="#22c55e" />
         </TouchableOpacity>
         <View style={styles.headerTextContainer}>
-          <Text style={styles.title}>Client Bookings</Text>
+          <Text style={styles.title}>Client Bookings </Text>
           <Text style={styles.subtitle}>Pickup orders from clients</Text>
         </View>
       </View>

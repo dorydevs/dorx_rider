@@ -134,8 +134,8 @@ export default function AccountScreen() {
                 ),
               )}
             </View>
-          </View>
         )}
+           </View>
 
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <AntDesign name="logout" size={20} color="#fff" />
