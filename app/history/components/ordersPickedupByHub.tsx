@@ -15,21 +15,19 @@ import {
   View,
 } from "react-native";
 import BottomDrawer from "react-native-animated-bottom-drawer";
+import { Ionicons } from "@expo/vector-icons";
 type clientHistoryData = any;
 const SheetItem = ({ label, value }: { label: string; value?: any }) => (
-  <View style={{ marginBottom: 10 }}>
-    <Text style={{ fontSize: 12, color: "#6b7280" }}>{label}</Text>
-    <Text style={{ fontSize: 14, fontWeight: "600" }}>{value ?? "-"}</Text>
+  <View style={{ marginBottom: 12 }}>
+    <Text style={{ fontSize: 11, color: "#7f8c8d", fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</Text>
+    <Text style={{ fontSize: 15, fontWeight: "600", color: "#2c3e50", marginTop: 4 }}>{value ?? "-"}</Text>
   </View>
 );
 const Divider = () => (
-  <View style={{ height: 1, backgroundColor: "#e5e7eb", marginVertical: 12 }} />
+  <View style={{ height: 1, backgroundColor: "#e8ecf1", marginVertical: 16 }} />
 );
 export default function clientHistoryt() {
-  const bottomDrawerRef = useRef<{
-    open: () => void;
-    close: () => void;
-  } | null>(null);
+  const bottomDrawerRef = useRef<any>(null);
   const { width } = useWindowDimensions();
   const user = useAppSelector((state: any) => state.user.user);
   const [userData, setUserData] = useState<any>(null);
@@ -52,7 +50,6 @@ export default function clientHistoryt() {
   const openBottomDrawer = (item: clientHistoryData) => {
     setSelectedItem(item);
     bottomDrawerRef.current?.open();
-    console.log(item);
   };
 
   const fetchBookings = async (orderData: any) => {
@@ -64,7 +61,7 @@ export default function clientHistoryt() {
       setBookings(data);
       setBookingsLoading(false);
     } catch (error) {
-      console.log("ERROR:", error);
+      console.error("Fetch bookings error:", error);
     }
   };
 
@@ -79,18 +76,37 @@ export default function clientHistoryt() {
       <TouchableOpacity
         style={[styles.card, { width: Math.min(760, width - 40) }]}
         onPress={() => openBottomDrawer(item)}
-        activeOpacity={0.75}
+        activeOpacity={0.7}
       >
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 15 }}> {item.waybillNumber}</Text>
-          <Text style={{ opacity: 0.5 }}>COD Value : {item.codValue}</Text>
-          <Text style={{ opacity: 0.5 }}>Item Weigth: {item.itemWeight}</Text>
-          <Text style={{ opacity: 0.5 }}>Total Items{item.numberOfItem}</Text>
-          <Text style={{ opacity: 0.5 }}>Total Items{item.receiverName}</Text>
-          <Text style={{ opacity: 0.5 }}>
-            Scanned Date : {moment(item.scannedDate).format("DD-MM-YYYY")}
-          </Text>
+        <View style={styles.cardIconContainer}>
+          <Ionicons name="cube" size={22} color="#22c55e" />
         </View>
+        <View style={styles.cardContent}>
+          <Text style={styles.cardTitle}>{item.waybillNumber}</Text>
+          <View style={styles.cardDetailRow}>
+            <Ionicons name="person-outline" size={14} color="#7f8c8d" />
+            <Text style={styles.cardDetail}>{item.receiverName}</Text>
+          </View>
+          <View style={styles.cardDetailRow}>
+            <Ionicons name="cash-outline" size={14} color="#7f8c8d" />
+            <Text style={styles.cardDetail}>COD: ₱{item.codValue || 0}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <View style={styles.infoItem}>
+              <Ionicons name="scale-outline" size={12} color="#95a5a6" />
+              <Text style={styles.infoText}>{item.itemWeight}kg</Text>
+            </View>
+            <View style={styles.infoItem}>
+              <Ionicons name="layers-outline" size={12} color="#95a5a6" />
+              <Text style={styles.infoText}>{item.numberOfItem} items</Text>
+            </View>
+            <View style={styles.infoItem}>
+              <Ionicons name="calendar-outline" size={12} color="#95a5a6" />
+              <Text style={styles.infoText}>{moment(item.scannedDate).format("MMM DD")}</Text>
+            </View>
+          </View>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color="#bdc3c7" />
       </TouchableOpacity>
     );
   };
@@ -106,80 +122,78 @@ export default function clientHistoryt() {
         }
       } catch (error) {
         console.error("Error loading user data:", error);
-      } finally {
-        console.log("Success");
       }
     };
 
     loadUserData();
   }, [user]);
 
-  console.log(bookings);
-
   return (
     <View style={styles.container}>
-      <View style={{ marginTop: 35 }}></View>
-      <View>
-        <View>
-          <View
-            style={{
-              padding: 20,
-              marginTop: 20,
-              borderRadius: 12,
-              backgroundColor: "#294983",
-              elevation: 2,
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "flex-end",
-            }}
-          >
-            <View>
-              <Text
-                style={{ fontSize: 18, color: "white", fontWeight: "bold" }}
-              >
-                Pickup Address
-              </Text>
-              <Text style={{ fontSize: 16, color: "white" }}>
-                {bookings[0]?.senderName}
-              </Text>
-              <Text style={{ fontSize: 13, opacity: 0.5, color: "white" }}>
-                {`${bookings[0]?.senderBarangay}, ${bookings[0]?.senderCity}, ${bookings[0]?.senderProvince}`}
-              </Text>
+      <View style={styles.headerSection}>
+        <View style={styles.pickupCard}>
+          <View style={styles.pickupHeader}>
+            <View style={styles.pickupIconContainer}>
+              <Ionicons name="location" size={28} color="#fff" />
             </View>
-
-            <View style={{ padding: 20 }}>
-              <Text style={{ fontSize: 30, color: "white", marginBottom: -15 }}>
-                {bookings.length}
-              </Text>
+            <View style={styles.pickupInfo}>
+              <Text style={styles.pickupLabel}>Pickup Address</Text>
+              <Text style={styles.pickupName}>{bookings[0]?.senderName || "Loading..."}</Text>
+              {bookings[0] && (
+                <View style={styles.addressRow}>
+                  <Ionicons name="pin-outline" size={14} color="#d1fae5" />
+                  <Text style={styles.pickupAddress}>
+                    {`${bookings[0].senderBarangay}, ${bookings[0].senderCity}, ${bookings[0].senderProvince}`}
+                  </Text>
+                </View>
+              )}
             </View>
+          </View>
+          <View style={styles.countBadge}>
+            <Text style={styles.countLabel}>Total Bookings</Text>
+            <Text style={styles.countValue}>{bookings.length}</Text>
           </View>
         </View>
       </View>
 
-      {bookingsLoading ? (
-        <View style={{ padding: 20, marginTop: 50 }}>
-          <ActivityIndicator size="large" />
-        </View>
-      ) : (
-        <FlatList
-          data={bookings}
-          keyExtractor={(item, idx) =>
-            String(item?.id ?? item?.bookingId ?? idx)
-          }
-          renderItem={renderItem}
-          contentContainerStyle={{ paddingVertical: 16 }}
-          ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
-        />
-      )}
+      <View style={styles.listSection}>
+        {bookingsLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#22c55e" />
+            <Text style={styles.loadingText}>Loading bookings...</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={bookings}
+            keyExtractor={(item, idx) =>
+              String(item?.id ?? item?.bookingId ?? idx)
+            }
+            renderItem={renderItem}
+            contentContainerStyle={styles.listContent}
+            ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Ionicons name="cube-outline" size={48} color="#bdc3c7" />
+                <Text style={styles.emptyText}>No bookings found</Text>
+              </View>
+            }
+          />
+        )}
+      </View>
 
       <BottomDrawer
         ref={bottomDrawerRef}
         initialHeight={560}
         enableSnapping={false}
       >
+        <View style={styles.drawerHandle} />
         <ScrollView showsVerticalScrollIndicator={false}>
           {selectedItem && (
-            <View style={{ padding: 16 }}>
+            <View style={styles.drawerContent}>
+              <View style={styles.drawerTitle}>
+                <Ionicons name="document-text" size={20} color="#22c55e" />
+                <Text style={styles.drawerTitleText}>Booking Details</Text>
+              </View>
               <View style={styles.items}>
                 <SheetItem label="Item Name" value={selectedItem.itemName} />
                 <SheetItem
@@ -273,13 +287,89 @@ export default function clientHistoryt() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    backgroundColor: "#f5f7fa",
   },
-  items: {
+  headerSection: {
+    padding: 20,
+    paddingTop: 50,
+    paddingBottom: 16,
+  },
+  pickupCard: {
+    backgroundColor: "#22c55e",
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: "#22c55e",
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
+  pickupHeader: {
     flexDirection: "row",
     alignItems: "center",
-    flexWrap: "wrap",
-    gap: 10,
+    gap: 16,
+    marginBottom: 16,
+  },
+  pickupIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  pickupInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  pickupLabel: {
+    fontSize: 12,
+    color: "#d1fae5",
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  pickupName: {
+    fontSize: 18,
+    color: "#fff",
+    fontWeight: "700",
+  },
+  addressRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 2,
+  },
+  pickupAddress: {
+    fontSize: 13,
+    color: "#d1fae5",
+    flex: 1,
+  },
+  countBadge: {
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    borderRadius: 12,
+    padding: 16,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+  },
+  countLabel: {
+    fontSize: 12,
+    color: "#d1fae5",
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  countValue: {
+    fontSize: 36,
+    color: "#fff",
+    fontWeight: "700",
+  },
+  listSection: {
+    flex: 1,
+  },
+  listContent: {
+    padding: 20,
+    paddingBottom: 32,
   },
   card: {
     padding: 16,
@@ -287,7 +377,101 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     flexDirection: "row",
     alignItems: "center",
+    gap: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
     elevation: 2,
+  },
+  cardIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#dcfce7",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  cardContent: {
+    flex: 1,
+    gap: 4,
+  },
+  cardTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#2c3e50",
+  },
+  cardDetailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  cardDetail: {
+    fontSize: 13,
+    color: "#7f8c8d",
+  },
+  infoRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 4,
+  },
+  infoItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  infoText: {
+    fontSize: 11,
+    color: "#95a5a6",
+  },
+  loadingContainer: {
+    padding: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: "#7f8c8d",
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: "#7f8c8d",
+  },
+  drawerHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: "#e8ecf1",
+    borderRadius: 2,
+    alignSelf: "center",
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  drawerContent: {
+    padding: 20,
+  },
+  drawerTitle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 20,
+  },
+  drawerTitleText: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#2c3e50",
+  },
+  items: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 10,
   },
   backButton: {
     width: 40,
@@ -298,8 +482,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: "bold",
-
-    color: "#50a3fc",
+    color: "#4ade80",
   },
   subtitle: {
     fontSize: 16,

@@ -12,7 +12,7 @@ import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 export default function AccountScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const user = useAppSelector((state) => state.user.user);
+  const user = useAppSelector((state: any) => state.user.user);
   const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -57,57 +57,69 @@ export default function AccountScreen() {
     <View style={styles.container}>
       <View style={styles.card}>
         <View style={styles.header}>
-          <FontAwesome name="user-o" size={45} color="black" />
-          <View style={{ flexDirection: "column", gap: -10 }}>
+          <View style={styles.avatarContainer}>
+            <FontAwesome name="user-o" size={40} color="#fff" />
+          </View>
+          <View style={styles.headerInfo}>
             <Text style={styles.name}>{userData?.name || "User"}</Text>
-            <Text style={styles.role}>{userData?.role || "Rider"}</Text>
+            <Text style={styles.role}>
+              {userData?.accountType === 1 ? "Hub Rider" : "Store Rider"}
+            </Text>
           </View>
         </View>
 
-        <View style={styles.row}>
-          <Ionicons
-            name="call-outline"
-            size={20}
-            color="#000"
-            style={styles.icon}
-          />
-          <Text style={styles.rowLabel}>Phone</Text>
-          <Text style={styles.rowValue}>{userData?.phoneNumber || "N/A"}</Text>
-        </View>
+        <View style={styles.infoSection}>
+          <View style={styles.row}>
+            <View style={styles.iconContainer}>
+              <Ionicons name="call-outline" size={18} color="#22c55e" />
+            </View>
+            <View style={styles.rowContent}>
+              <Text style={styles.rowLabel}>Phone Number</Text>
+              <Text style={styles.rowValue}>
+                {userData?.phoneNumber || "N/A"}
+              </Text>
+            </View>
+          </View>
 
-        <View style={styles.row}>
-          <Ionicons
-            name="mail-outline"
-            size={20}
-            color="#000"
-            style={styles.icon}
-          />
-          <Text style={styles.rowLabel}>Email</Text>
-          <Text style={styles.rowValue}>{userData?.email || "N/A"}</Text>
-        </View>
+          <View style={styles.row}>
+            <View style={styles.iconContainer}>
+              <Ionicons name="mail-outline" size={18} color="#22c55e" />
+            </View>
+            <View style={styles.rowContent}>
+              <Text style={styles.rowLabel}>Email Address</Text>
+              <Text style={styles.rowValue}>{userData?.email || "N/A"}</Text>
+            </View>
+          </View>
 
-        <View style={styles.row}>
-          <Ionicons
-            name="storefront-outline"
-            size={20}
-            color="#000"
-            style={styles.icon}
-          />
-          <Text style={styles.rowLabel}>Store</Text>
-          <Text style={styles.rowValue}>{userData?.storeName || "N/A"}</Text>
-        </View>
+          {userData?.storeName && (
+            <View style={styles.row}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="storefront-outline" size={18} color="#22c55e" />
+              </View>
+              <View style={styles.rowContent}>
+                <Text style={styles.rowLabel}>Store Name</Text>
+                <Text style={styles.rowValue}>
+                  {userData?.storeName || "N/A"}
+                </Text>
+              </View>
+            </View>
+          )}
 
-        <View style={styles.row}>
-          <Ionicons
-            name="location-outline"
-            size={20}
-            color="#000"
-            style={styles.icon}
-          />
-          <Text style={styles.rowLabel}>Address</Text>
-          <Text style={styles.rowValue}>
-            {userData?.storeCity || "N/A"} , {userData?.storeProvince || "N/A"}
-          </Text>
+          {(userData?.storeCity || userData?.storeProvince) && (
+            <View style={styles.row}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="location-outline" size={18} color="#22c55e" />
+              </View>
+              <View style={styles.rowContent}>
+                <Text style={styles.rowLabel}>Location</Text>
+                <Text style={styles.rowValue}>
+                  {[userData?.storeCity, userData?.storeProvince]
+                    .filter(Boolean)
+                    .join(", ") || "N/A"}
+                </Text>
+              </View>
+            </View>
+          )}
         </View>
 
         <View style={styles.section}>
@@ -122,14 +134,12 @@ export default function AccountScreen() {
                 ),
               )}
             </View>
-          )}
-        </View>
+          </View>
+        )}
 
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <AntDesign name="arrow-right" size={24} color="black" />
-            <Text style={styles.logoutText}>Logout</Text>
-          </View>
+          <AntDesign name="logout" size={20} color="#fff" />
+          <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -140,80 +150,141 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: "#ffffff",
+    backgroundColor: "#f5f7fa",
   },
   card: {
     backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 20,
     shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
-    marginTop: 45,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
+    marginTop: 40,
   },
   header: {
-    marginBottom: 12,
+    marginBottom: 24,
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 16,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e8ecf1",
+  },
+  avatarContainer: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: "#22c55e",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#22c55e",
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  headerInfo: {
+    flex: 1,
+    gap: 4,
   },
   name: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "700",
-    marginBottom: 4,
+    color: "#2c3e50",
   },
   role: {
     fontSize: 14,
-    color: "#333",
+    color: "#7f8c8d",
+    fontWeight: "500",
+  },
+  infoSection: {
+    gap: 16,
+    marginBottom: 20,
   },
   row: {
     flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: "#f0f0f0",
+    alignItems: "flex-start",
+    gap: 12,
   },
-  icon: {
-    width: 28,
+  iconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#dcfce7",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  rowContent: {
+    flex: 1,
+    gap: 4,
   },
   rowLabel: {
-    width: 100,
-    fontSize: 14,
-    color: "#333",
+    fontSize: 12,
+    color: "#7f8c8d",
+    fontWeight: "500",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   rowValue: {
-    flex: 1,
-    fontSize: 14,
-    color: "#000",
+    fontSize: 15,
+    color: "#2c3e50",
+    fontWeight: "500",
   },
   section: {
-    marginTop: 12,
-    marginBottom: 40,
+    marginTop: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: "#e8ecf1",
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 14,
-    logoutButton: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: "#e74c3c",
-      marginTop: 24,
-      paddingVertical: 14,
-      borderRadius: 8,
-      gap: 8,
-    },
-    logoutText: {
-      color: "#fff",
-      fontSize: 16,
-      fontWeight: "600",
-    },
-    fontWeight: "600",
-    marginBottom: 8,
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#2c3e50",
   },
-  pills: {
+  pillsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  pill: {
+    backgroundColor: "#dcfce7",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#bbf7d0",
+  },
+  pillText: {
     fontSize: 13,
-    color: "#333",
-    lineHeight: 20,
+    color: "#16a34a",
+    fontWeight: "600",
+  },
+  logoutButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#e74c3c",
+    marginTop: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+    shadowColor: "#e74c3c",
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  logoutText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
   },
 });

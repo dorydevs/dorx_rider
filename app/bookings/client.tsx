@@ -1,6 +1,6 @@
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import axiosInstance from "@/utils/axiosInstance";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useIsFocused } from "@react-navigation/native";
 import { useRouter } from "expo-router";
@@ -48,6 +48,10 @@ export default function ClientScreen() {
     loadUserData();
   }, [user]);
 
+  console.log("userData.assignedBarangays : >> ", userData?.assignedBarangays);
+
+   console.log("store city: >> ", userData?.storeCity);
+   console.log("store id: >> ", userData?.id);
   useEffect(() => {
     if (isFocused) {
       if (userData !== null) {
@@ -85,6 +89,8 @@ export default function ClientScreen() {
               setclientData(response.data.result);
             }
             setLoading(false);
+            
+            setclientData(response.data.result);
           } catch (err: any) {
             console.error("Failed to load client clientData:", err);
             setError(err?.message ?? "Failed to load clientData");
@@ -108,51 +114,54 @@ export default function ClientScreen() {
   };
 
   const renderItem = ({ item }: { item: Booking }) => {
-    const title = item?.customerName ?? item?.name ?? item?.id ?? "Booking";
-    const subtitle =
-      item?.pickupAddress ?? item?.address ?? item?.pickup_location ?? "";
-
     return (
       <TouchableOpacity
         style={[styles.card, { width: Math.min(760, width - 40) }]}
         onPress={() => handlePress(item)}
-        activeOpacity={0.75}
+        activeOpacity={0.7}
       >
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 16 }}>{item.clientName}</Text>
-
-          <Text style={{ opacity: 0.5, fontSize: 13 }} numberOfLines={2}>
-            {item.address}
-          </Text>
+        <View style={styles.cardIconContainer}>
+          <Ionicons name="business" size={22} color="#22c55e" />
         </View>
+        <View style={styles.cardContent}>
+          <Text style={styles.cardTitle}>{item.clientName}</Text>
+          <View style={styles.cardDetailRow}>
+            <Ionicons name="location-outline" size={14} color="#7f8c8d" />
+            <Text style={styles.cardAddress} numberOfLines={2}>
+              {item.address}
+            </Text>
+          </View>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color="#bdc3c7" />
       </TouchableOpacity>
     );
   };
 
   return (
     <View style={styles.container}>
-      <View
-        style={{ flexDirection: "row", alignItems: "center", paddingTop: 25 }}
-      >
+      <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <FontAwesome name="chevron-left" size={24} color="#007AFF" />
+          <Ionicons name="chevron-back" size={24} color="#22c55e" />
         </TouchableOpacity>
-
-        <Text style={styles.title}>Client</Text>
+        <View style={styles.headerTextContainer}>
+          <Text style={styles.title}>Client Bookings</Text>
+          <Text style={styles.subtitle}>Pickup orders from clients</Text>
+        </View>
       </View>
 
       {loading ? (
-        <View style={{ padding: 20 }}>
-          <ActivityIndicator size="large" />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#22c55e" />
+          <Text style={styles.loadingText}>Loading bookings...</Text>
         </View>
       ) : error ? (
-        <View>
-          <Text style={{ color: "red" }}>
-            Something went wrong while trying to display data
-          </Text>
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle" size={48} color="#e74c3c" />
+          <Text style={styles.errorText}>Something went wrong</Text>
+          <Text style={styles.errorSubtext}>{error}</Text>
         </View>
       ) : remittanceCheckerData ? (
         <View style={styles.remittanceContainer}>
@@ -175,8 +184,14 @@ export default function ClientScreen() {
             String(item?.id ?? item?.bookingId ?? idx)
           }
           renderItem={renderItem}
-          contentContainerStyle={{ paddingVertical: 16 }}
-          ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+          contentContainerStyle={styles.listContent}
+          ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Ionicons name="folder-open-outline" size={48} color="#bdc3c7" />
+              <Text style={styles.emptyText}>No bookings available</Text>
+            </View>
+          }
         />
       )}
     </View>
@@ -186,7 +201,39 @@ export default function ClientScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#f5f7fa",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingTop: 50,
+    paddingBottom: 16,
+    paddingHorizontal: 20,
+    backgroundColor: "#fff",
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 8,
+  },
+  headerTextContainer: {
+    flex: 1,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#2c3e50",
+  },
+  subtitle: {
+    fontSize: 13,
+    color: "#7f8c8d",
+    marginTop: 2,
+  },
+  listContent: {
     padding: 20,
+    paddingBottom: 32,
   },
   card: {
     padding: 16,
@@ -194,24 +241,73 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     flexDirection: "row",
     alignItems: "center",
-    elevation: 2,
+    gap: 12,
   },
-  backButton: {
+  cardIconContainer: {
     width: 40,
     height: 40,
+    borderRadius: 20,
+    backgroundColor: "#dcfce7",
     justifyContent: "center",
-    marginRight: -10,
+    alignItems: "center",
   },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-
-    color: "#50a3fc",
+  cardContent: {
+    flex: 1,
+    gap: 4,
   },
-  subtitle: {
+  cardTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#2c3e50",
+  },
+  cardDetailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  cardAddress: {
+    fontSize: 13,
+    color: "#7f8c8d",
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 40,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: "#7f8c8d",
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 40,
+  },
+  errorText: {
+    marginTop: 16,
     fontSize: 16,
-    opacity: 0.7,
-    marginBottom: 30,
+    fontWeight: "600",
+    color: "#e74c3c",
+  },
+  errorSubtext: {
+    marginTop: 8,
+    fontSize: 14,
+    color: "#95a5a6",
+    textAlign: "center",
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: "#7f8c8d",
   },
   content: {
     marginTop: 40,

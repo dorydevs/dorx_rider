@@ -3,7 +3,7 @@ import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { useScannerSounds } from "@/components/ScannerSounds";
 import { useAppSelector } from "@/store/hooks";
 import axiosInstance from "@/utils/axiosInstance";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { CameraType, CameraView, useCameraPermissions } from "expo-camera";
 import * as FileSystem from "expo-file-system/legacy";
@@ -72,21 +72,12 @@ export default function CustomersScreen() {
     longitude: number;
   } | null>(null);
 
-  const bottomDrawerRef = useRef<{
-    open: () => void;
-    close: () => void;
-  } | null>(null);
-  const cameraButtomDrawer = useRef<{
-    open: () => void;
-    close: () => void;
-  } | null>(null);
+  const bottomDrawerRef = useRef<any>(null);
+  const cameraButtomDrawer = useRef<any>(null);
 
   console.log(">>>> ", showReturn);
 
-  const bottomDrawerForReturnref = useRef<{
-    open: () => void;
-    close: () => void;
-  } | null>(null);
+  const bottomDrawerForReturnref = useRef<any>(null);
 
   const openCameraDrawer = () => {
     setShowScanner(false); // Unmount scanner first
@@ -419,7 +410,6 @@ export default function CustomersScreen() {
         );
         const posPromise = Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced,
-          maximumAge: 10000,
         });
 
         loc = await Promise.race([posPromise, timeout]);
@@ -452,7 +442,7 @@ export default function CustomersScreen() {
         <Text style={styles.message}>
           We need your permission to show the camera
         </Text>
-        <Button onPress={requestPermission} title="grant permission" />
+        <Button onPress={requestPermission}>grant permission</Button>
       </View>
     );
   }
@@ -473,26 +463,29 @@ export default function CustomersScreen() {
   const newLocal = "green";
   return (
     <View style={styles.container}>
-      <View
-        style={{ flexDirection: "row", alignItems: "center", paddingTop: 25 }}
-      >
+      <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <FontAwesome name="chevron-left" size={24} color="#3f6e6c" />
+          <Ionicons name="chevron-back" size={24} color="#3498db" />
         </TouchableOpacity>
-
-        <Text style={styles.title}>Customers</Text>
+        <View style={styles.headerTextContainer}>
+          <Text style={styles.title}>Customer Delivery</Text>
+          <Text style={styles.subtitle}>Scan orders for delivery</Text>
+        </View>
       </View>
 
-      {showScanner && (
-        <BarcodeScanner
-          key="background-scanner"
-          onScan={onScan}
-          scanned={scanned}
-        />
-      )}
+      <View style={styles.scannerContainer}>
+        {showScanner && (
+          <BarcodeScanner
+            key="background-scanner"
+            onScan={onScan}
+            scanned={scanned}
+          />
+        )}
+      </View>
+
       <View style={styles.statusContainer}>
         <View
           style={[
@@ -510,17 +503,26 @@ export default function CustomersScreen() {
       </View>
 
       {scanResultMessage && (
-        <Text
-          style={{
-            textAlign: "center",
-            fontWeight: "bold",
-            fontSize: 17,
-            color:
-              scanResultMessage === "Successfully Scanned!" ? "#22c55e" : "red",
-          }}
+        <View
+          style={[
+            styles.resultContainer,
+            invalid ? styles.errorBg : styles.successBg,
+          ]}
         >
-          {scanResultMessage}
-        </Text>
+          <Ionicons
+            name={invalid ? "close-circle" : "checkmark-circle"}
+            size={20}
+            color={invalid ? "#e74c3c" : "#27ae60"}
+          />
+          <Text
+            style={[
+              styles.resultText,
+              invalid ? styles.errorColor : styles.successColor,
+            ]}
+          >
+            {scanResultMessage}
+          </Text>
+        </View>
       )}
 
       <BottomDrawer
@@ -694,7 +696,7 @@ export default function CustomersScreen() {
               <View collapsable={false}>
                 <Image
                   onLoadEnd={() => setPreviewReady(true)}
-                  source={{ uri: photoUri }}
+                  source={{ uri: photoUri || '' }}
                   style={styles.camera}
                 />
 
@@ -868,11 +870,53 @@ export default function CustomersScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
+  container: { flex: 1, backgroundColor: "#f5f7fa" },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingTop: 50,
+    paddingBottom: 16,
+    paddingHorizontal: 20,
+    backgroundColor: "#fff",
   },
-
+  headerTextContainer: { flex: 1 },
+  backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 8,
+  },
+  title: { fontSize: 22, fontWeight: "700", color: "#2c3e50" },
+  subtitle: { fontSize: 13, color: "#7f8c8d", marginTop: 2 },
+  scannerContainer: { flex: 1, margin: 20, borderRadius: 16, overflow: "hidden" },
+  statusContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+  },
+  statusIndicator: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },
+  statusText: { fontSize: 14, fontWeight: "600", color: "#2c3e50" },
+  resultContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  errorBg: { backgroundColor: "#fee", borderColor: "#fcc" },
+  successBg: { backgroundColor: "#d4edda", borderColor: "#c3e6cb" },
+  resultText: { flex: 1, fontSize: 14, fontWeight: "600" },
+  errorColor: { color: "#e74c3c" },
+  successColor: { color: "#27ae60" },
   buttonText: { color: "#fff", fontWeight: "bold" },
   successButton: { backgroundColor: "#4CAF50" },
   cancelButton: { backgroundColor: "#f44336" },
@@ -906,11 +950,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  message: {
-    textAlign: "center",
-    paddingBottom: 10,
-  },
-
+  message: { textAlign: "center", paddingBottom: 10 },
   buttonContainer: {
     position: "absolute",
     bottom: 64,
@@ -919,59 +959,9 @@ const styles = StyleSheet.create({
     width: "100%",
     paddingHorizontal: 64,
   },
-
-  text: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "white",
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    marginRight: -10,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    marginBottom: 8,
-    color: "#34C759",
-  },
-  subtitle: {
-    fontSize: 16,
-    opacity: 0.7,
-    marginBottom: 30,
-  },
-  content: {
-    marginTop: 40,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  description: {
-    fontSize: 16,
-    textAlign: "center",
-    marginTop: 20,
-    opacity: 0.8,
-  },
-  statusContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 12,
-    paddingVertical: 8,
-  },
-  statusIndicator: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 8,
-  },
-  statusText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
-  },
-
+  text: { fontSize: 24, fontWeight: "bold", color: "white" },
+  content: { marginTop: 40, justifyContent: "center", alignItems: "center" },
+  description: { fontSize: 16, textAlign: "center", marginTop: 20, opacity: 0.8 },
   resultAlert: {
     marginTop: 10,
     marginHorizontal: 12,
@@ -980,7 +970,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     alignItems: "center",
   },
-  resultText: { fontSize: 14, fontWeight: "600", marginTop: 4 },
   containerTwo: {
     backgroundColor: "#fff",
     height: 500,
