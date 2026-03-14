@@ -7,6 +7,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
+  Dimensions,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,8 +15,12 @@ import {
   View,
 } from "react-native";
 import BottomDrawer from "react-native-animated-bottom-drawer";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
 export default function RTSIncomingScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { height } = Dimensions.get("window");
 
   const { playSuccess, playError, playWarning } = useScannerSounds();
   const [data, setData] = useState<any>("");
@@ -128,7 +133,7 @@ export default function RTSIncomingScreen() {
       <View style={styles.scannerContainer}>
         <BarcodeScanner onScan={onScan} scanned={scanned} />
       </View>
-      
+
       <View style={styles.statusContainer}>
         <View
           style={[
@@ -144,7 +149,7 @@ export default function RTSIncomingScreen() {
               : "Ready to Scan"}
         </Text>
       </View>
-      
+
       {scanResultMessage && (
         <View style={styles.errorContainer}>
           <Ionicons name="alert-circle" size={20} color="#e74c3c" />
@@ -154,11 +159,17 @@ export default function RTSIncomingScreen() {
 
       <BottomDrawer
         ref={bottomDrawerRef}
-        initialHeight={560}
+        initialHeight={height * 0.8}
         enableSnapping={false}
       >
         <View style={styles.drawerHandle} />
-        <ScrollView contentContainerStyle={styles.drawerContent}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.drawerContent,
+            { paddingBottom: insets.bottom + 120 },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
           <SectionHeader icon="cube" title="Item Details" />
 
           <InfoRow label="Item Name" value={waybillDetails.itemName} />
@@ -258,13 +269,15 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: "hidden",
   },
+  bottomBar: {
+    paddingHorizontal: 20,
+    gap: 8,
+  },
   statusContainer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 12,
-    marginHorizontal: 20,
-    marginBottom: 12,
     backgroundColor: "#fff",
     borderRadius: 12,
   },
@@ -282,20 +295,23 @@ const styles = StyleSheet.create({
   errorContainer: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
     gap: 8,
-    marginHorizontal: 20,
-    marginBottom: 12,
-    padding: 12,
-    backgroundColor: "#fee",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#fcc",
+    padding: 14,
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    borderLeftWidth: 4,
+    borderLeftColor: "#E24B4A",
+    borderTopWidth: 0.5,
+    borderRightWidth: 0.5,
+    borderBottomWidth: 0.5,
+    borderTopColor: "#f5a5a5",
+    borderRightColor: "#f5a5a5",
+    borderBottomColor: "#f5a5a5",
   },
   errorText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#e74c3c",
+    color: "#A32D2D",
     flex: 1,
   },
   drawerHandle: {
@@ -309,7 +325,6 @@ const styles = StyleSheet.create({
   },
   drawerContent: {
     padding: 20,
-    paddingBottom: 40,
   },
   sectionHeader: {
     flexDirection: "row",

@@ -61,7 +61,7 @@ export default function HubScreen() {
             };
             const transactionPayload = {
               status: "picked-up from hub",
-              scannedDate: moment().format("YYYY-MM-DD hh:mm:ss"),
+              scannedDate: moment().format("YYYY-MM-DD HH:mm:ss"),
               riderId: userData.id,
               orderTransactionId: orderDetail.data.orderTransactionId,
             };
@@ -85,9 +85,10 @@ export default function HubScreen() {
             setScanned(false);
           } else {
             console.log("NATAWAG? ");
-            setScanResultMessage(
-              `INVALID \n Item Status : ${orderDetail.data.waybillStatus}`,
-            );
+
+            const status = orderDetail?.data?.waybillStatus ?? "INVALID";
+
+            setScanResultMessage(`INVALID \n Item Status : ${status}`);
             setBarangayDestination("");
             setAlertColor("red");
             playError();
@@ -200,7 +201,7 @@ export default function HubScreen() {
       ) : remittanceCheckerData ? (
         <View style={styles.remittanceContainer}>
           <View style={styles.remittanceCard}>
-            <FontAwesome name="exclamation-circle" size={22} color="red" />
+            <Ionicons name="alert-circle" size={22} color="red" />
             <Text style={styles.remittanceTitle}>Remittance Required</Text>
             <Text style={styles.remittanceMessage}>
               Remittance balance must be remitted before you can access client
@@ -262,7 +263,7 @@ const styles = StyleSheet.create({
   },
   headerTextContainer: {
     flex: 1,
-    marginBottom: 20,  
+    marginBottom: 20,
   },
   backButton: {
     width: 40,

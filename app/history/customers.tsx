@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   FlatList,
   StyleSheet,
+  Text,
   TouchableOpacity,
   useWindowDimensions,
   View,
@@ -101,6 +102,14 @@ export default function clientHistoryt() {
           renderItem={renderItem}
           contentContainerStyle={{ paddingVertical: 16 }}
           ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyTitle}>No History Found</Text>
+              <Text style={styles.emptySubtitle}>
+                There are no customer transactions to display yet.
+              </Text>
+            </View>
+          }
         />
       )}
     </View>
@@ -146,5 +155,22 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 20,
     opacity: 0.8,
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 80,
+    gap: 8,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#2c3e50",
+  },
+  emptySubtitle: {
+    fontSize: 13,
+    color: "#9ca3af",
+    textAlign: "center",
   },
 });

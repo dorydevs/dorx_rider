@@ -11,6 +11,7 @@ import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import moment from "moment";
 import { useEffect, useRef, useState } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
   ActivityIndicator,
@@ -28,13 +29,14 @@ import BottomDrawer from "react-native-animated-bottom-drawer";
 import MapView, { Marker } from "react-native-maps";
 import { Button } from "react-native-paper";
 import ViewShot, { captureRef } from "react-native-view-shot";
-const { width: any } = Dimensions.get("window");
+const { width } = Dimensions.get("window");
 export default function CustomersScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const viewShotRef = useRef(null);
   const [visible, setVisible] = useState(false);
   const [locationDenied, setLocationDenied] = useState(false);
-  const { playSuccess, playError, playWarning } = useScannerSounds();
+  const { playSuccess, playError } = useScannerSounds();
   const [data, setData] = useState<any>("");
   const [scanned, setScanned] = useState(false);
   const user = useAppSelector((state: any) => state.user.user);
@@ -54,7 +56,7 @@ export default function CustomersScreen() {
   const [attemptsLoading, setAttemptsLoading] = useState(false);
   const [attempts, setAttempts] = useState<any>("");
   const [attemptsMessage, setAttemptsMessage] = useState<any>("");
-  const [attemptReached, setAttemptReached] = useState<Boolean>(false);
+  const [attemptReached, setAttemptReached] = useState<boolean>(false);
   const [previewReady, setPreviewReady] = useState(false);
   const [orderNumber, setOrderNumber] = useState<any>("");
   const [permission, requestPermission] = useCameraPermissions();
@@ -239,7 +241,10 @@ export default function CustomersScreen() {
               playError();
             }
           } else {
-            setScanResultMessage(`This item is ${waybillData.waybillStatus}`);
+            const status =
+              waybillData?.waybillStatus ?? "has no Waybill status yet";
+
+            setScanResultMessage(`This item is ${status}`);
             setInvalid(true);
             setAlertColor("red");
             playError();
@@ -460,7 +465,6 @@ export default function CustomersScreen() {
 
     // Add your API or dispatch logic here
   };
-  const newLocal = "green";
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -486,44 +490,56 @@ export default function CustomersScreen() {
         )}
       </View>
 
-      <View style={styles.statusContainer}>
-        <View
-          style={[
-            styles.statusIndicator,
-            { backgroundColor: scanned ? "#ef4444" : "#22c55e" },
-          ]}
-        />
-        <Text style={styles.statusText}>
-          {loadingScan
-            ? "Processing..."
-            : scanned
-              ? "Camera Locked"
-              : "Ready to Scan"}
-        </Text>
-      </View>
-
-      {scanResultMessage && (
-        <View
-          style={[
-            styles.resultContainer,
-            invalid ? styles.errorBg : styles.successBg,
-          ]}
-        >
-          <Ionicons
-            name={invalid ? "close-circle" : "checkmark-circle"}
-            size={20}
-            color={invalid ? "#e74c3c" : "#27ae60"}
-          />
-          <Text
+      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 16 }]}>
+        <View style={styles.statusContainer}>
+          <View
             style={[
-              styles.resultText,
-              invalid ? styles.errorColor : styles.successColor,
+              styles.statusIndicator,
+              { backgroundColor: scanned ? "#ef4444" : "#22c55e" },
             ]}
-          >
-            {scanResultMessage}
+          />
+          <Text style={styles.statusText}>
+            {loadingScan
+              ? "Processing..."
+              : scanned
+                ? "Camera Locked"
+                : "Ready to Scan"}
           </Text>
         </View>
-      )}
+
+        {scanResultMessage && (
+          <View
+            style={[
+              styles.resultContainer,
+              invalid ? styles.errorBg : styles.successBg,
+            ]}
+          >
+            <View
+              style={[
+                styles.iconCircle,
+                invalid ? styles.errorCircle : styles.successCircle,
+              ]}
+            >
+              <Ionicons
+                name={invalid ? "close" : "checkmark"}
+                size={16}
+                color={invalid ? "#A32D2D" : "#3B6D11"}
+              />
+            </View>
+            <View style={styles.resultTextWrapper}>
+              <Text
+                style={[
+                  styles.resultLabel,
+                  invalid ? styles.errorColor : styles.successColor,
+                ]}
+              >
+                {invalid ? "Scan Failed" : "Scan Successful"}
+              </Text>
+              <Text style={styles.resultSubText}>{scanResultMessage}</Text>
+            </View>
+          </View>
+        )}
+      </View>
 
       <BottomDrawer
         ref={bottomDrawerRef}
@@ -533,7 +549,7 @@ export default function CustomersScreen() {
         closeOnPressBack={false}
         gestureMode="none"
       >
-        <View style={{ padding: 20 }}>
+        <View style={{ padding: 20, paddingBottom: insets.bottom + 20 }}>
           <ScrollView style={styles.containerTwo}>
             {scanResultMessage && (
               <View style={{ alignItems: "center" }}>
@@ -562,43 +578,57 @@ export default function CustomersScreen() {
             {/* Order Card */}
 
             <View style={styles.card}>
-              <View>
-                <Text>
-                  <Text style={{ fontWeight: "bold" }}>Delivery Attemps</Text> :{" "}
-                  {attempts.toUpperCase()}
-                </Text>
+              <View style={styles.cardAttemptRow}>
+                <View style={styles.attemptBadge}>
+                  <Text style={styles.attemptBadgeText}>
+                    {attempts.toUpperCase()} ATTEMPT
+                  </Text>
+                </View>
               </View>
+
               <Text style={styles.boldText}>{waybillDetails?.itemName}</Text>
-              <Text>{waybillDetails?.orderNumber}</Text>
+              <Text style={styles.orderNumberText}>
+                {waybillDetails?.orderNumber}
+              </Text>
 
               <View style={styles.divider} />
 
-              <Text>
-                <Text style={{ fontWeight: "bold" }}>COD Value:</Text>{" "}
-                {waybillDetails?.codValue}
-              </Text>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>COD Value</Text>
+                <Text style={styles.infoValue}>{waybillDetails?.codValue}</Text>
+              </View>
 
-              <Text>
-                <Text style={{ fontWeight: "bold" }}>Item Weight:</Text>{" "}
-                {waybillDetails?.itemWeight}{" "}
-              </Text>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Item Weight</Text>
+                <Text style={styles.infoValue}>
+                  {waybillDetails?.itemWeight}
+                </Text>
+              </View>
 
-              <Text>
-                <Text style={{ fontWeight: "bold" }}> Number of Item: </Text>{" "}
-                {waybillDetails?.numberOfItem}
-              </Text>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>No. of Items</Text>
+                <Text style={styles.infoValue}>
+                  {waybillDetails?.numberOfItem}
+                </Text>
+              </View>
 
-              <Text>
-                <Text style={{ fontWeight: "bold" }}> Recipient: </Text>
+              <View style={styles.divider} />
 
-                {`${waybillDetails?.receiverFirstName} ${waybillDetails?.receiverMiddleName} ${waybillDetails?.receiverLastName}`}
-              </Text>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Recipient</Text>
+                <Text
+                  style={[styles.infoValue, { flex: 1, textAlign: "right" }]}
+                >
+                  {`${waybillDetails?.receiverFirstName} ${waybillDetails?.receiverMiddleName} ${waybillDetails?.receiverLastName}`}
+                </Text>
+              </View>
 
-              <Text>
-                {" "}
-                <Text style={{ fontWeight: "bold" }}>Phone:</Text>{" "}
-                {waybillDetails?.receiverPhone}
-              </Text>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Phone</Text>
+                <Text style={styles.infoValue}>
+                  {waybillDetails?.receiverPhone}
+                </Text>
+              </View>
             </View>
 
             {/* Status Area */}
@@ -679,7 +709,7 @@ export default function CustomersScreen() {
         closeOnPressBack={false}
         gestureMode="none"
       >
-        <View style={{ padding: 20 }}>
+        <View style={{ padding: 20, paddingBottom: insets.bottom + 20 }}>
           {isPODActive && !photoUri ? (
             <CameraView
               key="drawer-camera"
@@ -696,7 +726,7 @@ export default function CustomersScreen() {
               <View collapsable={false}>
                 <Image
                   onLoadEnd={() => setPreviewReady(true)}
-                  source={{ uri: photoUri || '' }}
+                  source={{ uri: photoUri || "" }}
                   style={styles.camera}
                 />
 
@@ -825,7 +855,7 @@ export default function CustomersScreen() {
       <AnimatedDrawer visible={showReturn}>
         <ScrollView
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ paddingBottom: 100 }}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
         >
           <Text style={styles.label}>Reason for Return</Text>
 
@@ -889,34 +919,74 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 22, fontWeight: "700", color: "#2c3e50" },
   subtitle: { fontSize: 13, color: "#7f8c8d", marginTop: 2 },
-  scannerContainer: { flex: 1, margin: 20, borderRadius: 16, overflow: "hidden" },
+  scannerContainer: {
+    flex: 1,
+    margin: 20,
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+  bottomBar: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    gap: 8,
+  },
   statusContainer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 12,
-    marginHorizontal: 20,
-    marginBottom: 12,
     backgroundColor: "#fff",
     borderRadius: 12,
   },
   statusIndicator: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },
   statusText: { fontSize: 14, fontWeight: "600", color: "#2c3e50" },
+
+  // — Result message banner —
   resultContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginHorizontal: 20,
-    marginBottom: 12,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    borderLeftWidth: 4,
+    borderTopWidth: 0.5,
+    borderRightWidth: 0.5,
+    borderBottomWidth: 0.5,
+    backgroundColor: "#fff",
   },
-  errorBg: { backgroundColor: "#fee", borderColor: "#fcc" },
-  successBg: { backgroundColor: "#d4edda", borderColor: "#c3e6cb" },
-  resultText: { flex: 1, fontSize: 14, fontWeight: "600" },
-  errorColor: { color: "#e74c3c" },
-  successColor: { color: "#27ae60" },
+  errorBg: {
+    borderLeftColor: "#E24B4A",
+    borderTopColor: "#f5a5a5",
+    borderRightColor: "#f5a5a5",
+    borderBottomColor: "#f5a5a5",
+  },
+  successBg: {
+    borderLeftColor: "#639922",
+    borderTopColor: "#b6d97c",
+    borderRightColor: "#b6d97c",
+    borderBottomColor: "#b6d97c",
+  },
+  iconCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  errorCircle: { backgroundColor: "#FCEBEB" },
+  successCircle: { backgroundColor: "#EAF3DE" },
+  resultTextWrapper: { flex: 1, gap: 3 },
+  resultLabel: { fontSize: 13, fontWeight: "700", letterSpacing: 0.1 },
+  resultSubText: { fontSize: 14, color: "#6b7280" },
+  errorColor: { color: "#A32D2D" },
+  successColor: { color: "#3B6D11" },
+
   buttonText: { color: "#fff", fontWeight: "bold" },
   successButton: { backgroundColor: "#4CAF50" },
   cancelButton: { backgroundColor: "#f44336" },
@@ -961,7 +1031,12 @@ const styles = StyleSheet.create({
   },
   text: { fontSize: 24, fontWeight: "bold", color: "white" },
   content: { marginTop: 40, justifyContent: "center", alignItems: "center" },
-  description: { fontSize: 16, textAlign: "center", marginTop: 20, opacity: 0.8 },
+  description: {
+    fontSize: 16,
+    textAlign: "center",
+    marginTop: 20,
+    opacity: 0.8,
+  },
   resultAlert: {
     marginTop: 10,
     marginHorizontal: 12,
@@ -974,25 +1049,66 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     height: 500,
   },
+
+  // — Order card —
   card: {
-    padding: 16,
-    borderRadius: 12,
+    padding: 18,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: "#e5e7eb",
     marginBottom: 16,
-    flexDirection: "column",
-    gap: 10,
+    backgroundColor: "#fff",
+    gap: 8,
+  },
+  cardAttemptRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  attemptBadge: {
+    backgroundColor: "#EEF2FF",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  attemptBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#4338ca",
+    letterSpacing: 0.5,
   },
   boldText: {
-    fontWeight: "bold",
+    fontWeight: "700",
     fontSize: 16,
-    marginBottom: 4,
+    color: "#1a1a2e",
+  },
+  orderNumberText: {
+    fontSize: 13,
+    color: "#6b7280",
+    marginTop: -4,
   },
   divider: {
     height: 1,
-    backgroundColor: "#e5e7eb",
-    marginVertical: 10,
+    backgroundColor: "#f0f0f0",
+    marginVertical: 4,
   },
+  infoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 2,
+  },
+  infoLabel: {
+    fontSize: 13,
+    color: "#6b7280",
+    fontWeight: "500",
+  },
+  infoValue: {
+    fontSize: 13,
+    color: "#1a1a2e",
+    fontWeight: "600",
+  },
+
   verticalDivider: {
     width: 1,
     height: 14,
@@ -1009,16 +1125,14 @@ const styles = StyleSheet.create({
     marginVertical: 20,
   },
   button: {
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingVertical: 13,
+    borderRadius: 10,
     alignItems: "center",
-    marginVertical: 6,
+    marginVertical: 5,
   },
-
   warningButton: {
     backgroundColor: "#f59e0b",
   },
-
   successText: {
     fontSize: 32,
     marginBottom: 8,
