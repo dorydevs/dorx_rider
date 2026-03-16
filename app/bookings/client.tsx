@@ -50,8 +50,8 @@ export default function ClientScreen() {
 
   console.log("userData.assignedBarangays : >> ", userData?.assignedBarangays);
 
-   console.log("store city: >> ", userData?.storeCity);
-   console.log("store id: >> ", userData?.id);
+  console.log("store city: >> ", userData?.storeCity);
+  console.log("store id: >> ", userData?.id);
   useEffect(() => {
     if (isFocused) {
       if (userData !== null) {
@@ -89,8 +89,6 @@ export default function ClientScreen() {
               setclientData(response.data.result);
             }
             setLoading(false);
-            
-  
           } catch (err: any) {
             console.error("Failed to load client clientData:", err);
             setError(err?.message ?? "Failed to load clientData");
