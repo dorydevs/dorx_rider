@@ -54,7 +54,7 @@ export default function CustomersScreen() {
   const [attemptsLoading, setAttemptsLoading] = useState(false);
   const [attempts, setAttempts] = useState<any>("");
   const [attemptsMessage, setAttemptsMessage] = useState<any>("");
-  const [attemptReached, setAttemptReached] = useState<Boolean>(false);
+  const [attemptReached, setAttemptReached] = useState<boolean>(false);
   const [previewReady, setPreviewReady] = useState(false);
   const [orderNumber, setOrderNumber] = useState<any>("");
   const [permission, requestPermission] = useCameraPermissions();
@@ -564,8 +564,8 @@ export default function CustomersScreen() {
             <View style={styles.card}>
               <View>
                 <Text>
-                  <Text style={{ fontWeight: "bold" }}>Delivery Attemps</Text> :{" "}
-                  {attempts.toUpperCase()}
+                  <Text style={{ fontWeight: "bold" }}>Delivery Attempts</Text>{" "}
+                  : {attempts.toUpperCase()}
                 </Text>
               </View>
               <Text style={styles.boldText}>{waybillDetails?.itemName}</Text>
@@ -696,7 +696,7 @@ export default function CustomersScreen() {
               <View collapsable={false}>
                 <Image
                   onLoadEnd={() => setPreviewReady(true)}
-                  source={{ uri: photoUri || '' }}
+                  source={{ uri: photoUri || "" }}
                   style={styles.camera}
                 />
 
@@ -889,7 +889,12 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 22, fontWeight: "700", color: "#2c3e50" },
   subtitle: { fontSize: 13, color: "#7f8c8d", marginTop: 2 },
-  scannerContainer: { flex: 1, margin: 20, borderRadius: 16, overflow: "hidden" },
+  scannerContainer: {
+    flex: 1,
+    margin: 20,
+    borderRadius: 16,
+    overflow: "hidden",
+  },
   statusContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -961,7 +966,12 @@ const styles = StyleSheet.create({
   },
   text: { fontSize: 24, fontWeight: "bold", color: "white" },
   content: { marginTop: 40, justifyContent: "center", alignItems: "center" },
-  description: { fontSize: 16, textAlign: "center", marginTop: 20, opacity: 0.8 },
+  description: {
+    fontSize: 16,
+    textAlign: "center",
+    marginTop: 20,
+    opacity: 0.8,
+  },
   resultAlert: {
     marginTop: 10,
     marginHorizontal: 12,

@@ -18,7 +18,9 @@ export default function RTSReturnToClientScreen() {
   const [loadingScan, setLoadingScan] = useState(false);
   const [scanResultMessage, setScanResultMessage] = useState("");
   const [scannedData, setScannedData] = useState<string[]>([]);
-  const [alertColor, setAlertColor] = useState<"green" | "yellow" | "red">("green");
+  const [alertColor, setAlertColor] = useState<"green" | "yellow" | "red">(
+    "green",
+  );
 
   const onScan = async (scannedCode: any) => {
     if (scanned) return;
@@ -47,7 +49,7 @@ export default function RTSReturnToClientScreen() {
   useEffect(() => {
     async function processScan() {
       if (!data) return;
-      
+
       if (!scannedData.includes(data.data)) {
         setLoadingScan(true);
         setScanResultMessage("");
@@ -58,7 +60,9 @@ export default function RTSReturnToClientScreen() {
           );
 
           if (!orderDetail.data) {
-            throw new Error("Order not found. Please check the waybill number.");
+            throw new Error(
+              "Order not found. Please check the waybill number.",
+            );
           }
 
           // Create return transaction
@@ -71,7 +75,9 @@ export default function RTSReturnToClientScreen() {
           );
 
           setScannedData((prev) => [...prev, data.data]);
-          setScanResultMessage(`✓ RTS item successfully received from customer.`);
+          setScanResultMessage(
+            `✓ RTS item successfully received from customer.`,
+          );
           setAlertColor("green");
           playSuccess();
           setLoadingScan(false);
@@ -80,26 +86,30 @@ export default function RTSReturnToClientScreen() {
             setScanResultMessage("");
             setData("");
           }, 3000);
-          
         } catch (error: any) {
           console.error("RTS INCOMING SCANNING ERROR:", error);
           playError();
           setAlertColor("red");
           setLoadingScan(false);
           setScanned(false);
-          
+
           let errorMessage = "Scanning failed. ";
-          
+
           if (error.message === "Network Error" || !error.response) {
-            errorMessage += "Network connection error. Please check your internet and try again.";
+            errorMessage +=
+              "Network connection error. Please check your internet and try again.";
           } else if (error.response?.status === 404) {
-            errorMessage += "Order not found. Please verify the waybill number.";
+            errorMessage +=
+              "Order not found. Please verify the waybill number.";
           } else if (error.response?.status === 400) {
-            errorMessage += error.response?.data?.message || "Invalid request. This item may not be eligible for return.";
+            errorMessage +=
+              error.response?.data?.message ||
+              "Invalid request. This item may not be eligible for return.";
           } else if (error.response?.status === 401) {
             errorMessage += "Session expired. Please log in again.";
           } else if (error.response?.status === 409) {
-            errorMessage += "This item has already been processed for return.";
+            errorMessage +=
+              "This waybill has already been scanned and processed for return.";
           } else if (error.response?.data?.message) {
             errorMessage += error.response.data.message;
           } else if (error.message) {
@@ -107,7 +117,7 @@ export default function RTSReturnToClientScreen() {
           } else {
             errorMessage += "Unknown error occurred. Please try again.";
           }
-          
+
           setScanResultMessage(errorMessage);
           setTimeout(() => {
             setScanResultMessage("");
@@ -127,7 +137,7 @@ export default function RTSReturnToClientScreen() {
         }, 3000);
       }
     }
-    
+
     if (userData !== null) {
       processScan();
     }
@@ -136,7 +146,10 @@ export default function RTSReturnToClientScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
           <Ionicons name="chevron-back" size={24} color="#22c55e" />
         </TouchableOpacity>
         <View style={styles.headerTextContainer}>
@@ -148,40 +161,61 @@ export default function RTSReturnToClientScreen() {
       <View style={styles.scannerContainer}>
         <BarcodeScanner onScan={onScan} scanned={scanned} />
       </View>
-      
+
       <View style={styles.statusContainer}>
-        <View style={[styles.statusIndicator, { backgroundColor: scanned ? "#ef4444" : "#22c55e" }]} />
+        <View
+          style={[
+            styles.statusIndicator,
+            { backgroundColor: scanned ? "#ef4444" : "#22c55e" },
+          ]}
+        />
         <Text style={styles.statusText}>
-          {loadingScan ? "Processing..." : scanned ? "Camera Locked" : "Ready to Scan"}
+          {loadingScan
+            ? "Processing..."
+            : scanned
+              ? "Camera Locked"
+              : "Ready to Scan"}
         </Text>
       </View>
-      
+
       {scanResultMessage && (
-        <View style={[
-          styles.resultContainer, 
-          alertColor === "green" ? styles.successBg : 
-          alertColor === "yellow" ? styles.warningBg : 
-          styles.errorBg
-        ]}>
-          <Ionicons 
+        <View
+          style={[
+            styles.resultContainer,
+            alertColor === "green"
+              ? styles.successBg
+              : alertColor === "yellow"
+                ? styles.warningBg
+                : styles.errorBg,
+          ]}
+        >
+          <Ionicons
             name={
-              alertColor === "green" ? "checkmark-circle" : 
-              alertColor === "yellow" ? "warning" : 
-              "close-circle"
-            } 
-            size={24} 
+              alertColor === "green"
+                ? "checkmark-circle"
+                : alertColor === "yellow"
+                  ? "warning"
+                  : "close-circle"
+            }
+            size={24}
             color={
-              alertColor === "green" ? "#22c55e" : 
-              alertColor === "yellow" ? "#f39c12" : 
-              "#e74c3c"
-            } 
+              alertColor === "green"
+                ? "#22c55e"
+                : alertColor === "yellow"
+                  ? "#f39c12"
+                  : "#e74c3c"
+            }
           />
-          <Text style={[
-            styles.resultText, 
-            alertColor === "green" ? styles.successColor : 
-            alertColor === "yellow" ? styles.warningColor : 
-            styles.errorColor
-          ]}>
+          <Text
+            style={[
+              styles.resultText,
+              alertColor === "green"
+                ? styles.successColor
+                : alertColor === "yellow"
+                  ? styles.warningColor
+                  : styles.errorColor,
+            ]}
+          >
             {scanResultMessage}
           </Text>
         </View>
@@ -193,30 +227,55 @@ export default function RTSReturnToClientScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f5f7fa" },
   header: {
-    flexDirection: "row", alignItems: "center", paddingTop: 50,
-    paddingBottom: 16, paddingHorizontal: 20, backgroundColor: "#fff"
+    flexDirection: "row",
+    alignItems: "center",
+    paddingTop: 50,
+    paddingBottom: 16,
+    paddingHorizontal: 20,
+    backgroundColor: "#fff",
   },
   headerTextContainer: { flex: 1 },
   backButton: {
-    width: 40, height: 40, justifyContent: "center",
-    alignItems: "center", marginRight: 8
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 8,
   },
   title: { fontSize: 22, fontWeight: "700", color: "#2c3e50" },
   subtitle: { fontSize: 13, color: "#7f8c8d", marginTop: 2 },
-  scannerContainer: { flex: 1, margin: 20, borderRadius: 16, overflow: "hidden" },
+  scannerContainer: {
+    flex: 1,
+    margin: 20,
+    borderRadius: 16,
+    overflow: "hidden",
+  },
   statusContainer: {
-    flexDirection: "row", alignItems: "center", justifyContent: "center",
-    paddingVertical: 12, marginHorizontal: 20, marginBottom: 12,
-    backgroundColor: "#fff", borderRadius: 12
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    backgroundColor: "#fff",
+    borderRadius: 12,
   },
   statusIndicator: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },
   statusText: { fontSize: 14, fontWeight: "600", color: "#2c3e50" },
   resultContainer: {
-    flexDirection: "row", alignItems: "center", gap: 12,
-    marginHorizontal: 20, marginBottom: 12, padding: 16,
-    borderRadius: 12, borderWidth: 1.5, shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1,
-    shadowRadius: 4, elevation: 3
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   errorBg: { backgroundColor: "#fee2e2", borderColor: "#ef4444" },
   successBg: { backgroundColor: "#d1fae5", borderColor: "#22c55e" },
@@ -226,9 +285,18 @@ const styles = StyleSheet.create({
   successColor: { color: "#16a34a" },
   warningColor: { color: "#d97706" },
   content: { marginTop: 40, justifyContent: "center", alignItems: "center" },
-  description: { fontSize: 16, textAlign: "center", marginTop: 20, opacity: 0.8 },
+  description: {
+    fontSize: 16,
+    textAlign: "center",
+    marginTop: 20,
+    opacity: 0.8,
+  },
   resultAlert: {
-    marginTop: 10, marginHorizontal: 12, padding: 10,
-    borderRadius: 8, borderWidth: 2, alignItems: "center"
-  }
+    marginTop: 10,
+    marginHorizontal: 12,
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 2,
+    alignItems: "center",
+  },
 });

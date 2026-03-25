@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
   },
   headerTextContainer: {
     flex: 1,
-    marginBottom: 20,  
+    marginBottom: 20,
   },
   backButton: {
     width: 40,

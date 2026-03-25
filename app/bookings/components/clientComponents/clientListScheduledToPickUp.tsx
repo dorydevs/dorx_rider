@@ -5,7 +5,7 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useIsFocused } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { groupBy, sortBy } from "lodash"; 
+import { groupBy, sortBy } from "lodash";
 import moment from "moment";
 import { useEffect, useState } from "react";
 import {
@@ -58,7 +58,10 @@ export default function clientScheduledToPickUp() {
   };
   const renderItem = ({ item }: { item: ClientData }) => {
     {
-      console.log(item.waybillNumber);
+      console.log(item.orderNumber);
+    }
+    {
+      console.log("this is the items >>>>:", item);
     }
     return (
       <TouchableOpacity
@@ -68,7 +71,7 @@ export default function clientScheduledToPickUp() {
       >
         <View>
           <Text style={{ fontSize: 15, marginBottom: 5 }}>
-            {item.waybillNumber}
+            {item.orderNumber}
           </Text>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <Feather name="calendar" size={15} style={{ color: "gray" }} />
@@ -140,6 +143,7 @@ export default function clientScheduledToPickUp() {
               senderBarangay: d[0].senderBarangay,
               senderProvince: d[0].senderProvince,
               waybillNumber: d[0].waybillNumber,
+              orderNumber: d[0].orderNumber,
             };
           });
 
