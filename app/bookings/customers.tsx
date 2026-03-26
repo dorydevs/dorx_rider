@@ -927,15 +927,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 10,
   },
-  title: { fontSize: 18, fontWeight: "700", color: "#0F172A" },
-  subtitle: { fontSize: 12, color: "#94A3B8", marginTop: 1 },
+  title: { fontSize: 22, fontWeight: "700", color: "#2c3e50" },
+  subtitle: { fontSize: 13, color: "#7f8c8d", marginTop: 2 },
   scannerContainer: {
-    marginHorizontal: 16,
-    marginTop: 8,
+    flex: 1,
+    margin: 20,
     borderRadius: 16,
     overflow: "hidden",
   },
-  scanCountContainer: {
+  statusContainer: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     marginTop: 12,
@@ -1034,8 +1035,12 @@ const styles = StyleSheet.create({
     marginTop: 20,
     opacity: 0.8,
   },
-  resultContainer: {
-    flexDirection: "row",
+  resultAlert: {
+    marginTop: 10,
+    marginHorizontal: 12,
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 2,
     alignItems: "center",
     gap: 8,
     marginHorizontal: 20,
