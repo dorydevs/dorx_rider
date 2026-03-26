@@ -401,79 +401,11 @@ export default function scanClientScheduledParcel() {
         }}
       >
         <View
-          style={{ backgroundColor: "#fff", marginTop: -30, paddingTop: 30 }}
+          style={{ backgroundColor: "#fff", marginTop: -20, paddingTop: 20 }}
         >
-          {/* Drawer Header with Close Button */}
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-              paddingHorizontal: 20,
-              paddingVertical: 20,
-              backgroundColor: "#22c55e",
-              borderTopLeftRadius: 24,
-              borderTopRightRadius: 24,
-              marginTop: -31,
-            }}
-          >
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
-            >
-              <View
-                style={{
-                  backgroundColor: "#16a34a",
-                  padding: 8,
-                  borderRadius: 12,
-                }}
-              >
-                <Ionicons name="cube-outline" size={22} color="#fff" />
-              </View>
-              <View>
-                <Text
-                  style={{ fontSize: 11, color: "#bbf7d0", fontWeight: "500" }}
-                >
-                  PICKUP SCAN
-                </Text>
-                <Text
-                  style={{
-                    fontSize: 17,
-                    fontWeight: "800",
-                    color: "#fff",
-                    letterSpacing: 0.3,
-                  }}
-                >
-                  Scan Details
-                </Text>
-              </View>
-            </View>
-
-            <TouchableOpacity
-              onPress={() => bottomDrawerClose()}
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 6,
-                backgroundColor: "#16a34a",
-                paddingHorizontal: 14,
-                paddingVertical: 8,
-                borderRadius: 20,
-              }}
-            >
-              <Ionicons name="close" size={16} color="#fff" />
-              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>
-                Close
-              </Text>
-            </TouchableOpacity>
-          </View>
-
           <ScrollView
-            showsVerticalScrollIndicator={true}
-            contentContainerStyle={[
-              styles.drawerContent,
-              { paddingBottom: 40 },
-            ]}
-            style={{ maxHeight: 480 }}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.drawerContent}
           >
             {scanResultMessage && (
               <View style={styles.successBanner}>
@@ -485,7 +417,7 @@ export default function scanClientScheduledParcel() {
             {selectedItem && (
               <View>
                 <View style={styles.items}>
-                  <SheetItem label="Item Name " value={selectedItem.itemName} />
+                  <SheetItem label="Item Name" value={selectedItem.itemName} />
                   <SheetItem
                     label="Item Weight"
                     value={selectedItem.itemWeight}
