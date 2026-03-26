@@ -5,15 +5,17 @@ import { useAppSelector } from "@/store/hooks";
 import axiosInstance from "@/utils/axiosInstance";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from "@react-navigation/native";
 import { CameraType, CameraView, useCameraPermissions } from "expo-camera";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import moment from "moment";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   ActivityIndicator,
+  BackHandler,
   Dimensions,
   Image,
   Keyboard,
@@ -27,8 +29,22 @@ import {
 import BottomDrawer from "react-native-animated-bottom-drawer";
 import MapView, { Marker } from "react-native-maps";
 import { Button } from "react-native-paper";
+import { SafeAreaView } from "react-native-safe-area-context";
 import ViewShot, { captureRef } from "react-native-view-shot";
+
 const { width: any } = Dimensions.get("window");
+
+const ALERT_COLORS: Record<
+  string,
+  { border: string; bg: string; text: string }
+> = {
+  green: { border: "#16a34a", bg: "#22c55e", text: "#ffffff" },
+  red: { border: "#dc2626", bg: "#dc2626", text: "#ffffff" },
+  yellow: { border: "#d97706", bg: "#f59e0b", text: "#ffffff" },
+  blue: { border: "#16a34a", bg: "#22c55e", text: "#ffffff" },
+  orange: { border: "#ea580c", bg: "#f97316", text: "#ffffff" },
+};
+
 export default function CustomersScreen() {
   const router = useRouter();
   const viewShotRef = useRef(null);
@@ -42,7 +58,9 @@ export default function CustomersScreen() {
   const [invalid, setInvalid] = useState(false);
   const [loadingScan, setLoadingScan] = useState(false);
   const [scanResultMessage, setScanResultMessage] = useState("");
-  const [alertColor, setAlertColor] = useState("blue");
+  const [alertColor, setAlertColor] = useState<
+    "green" | "blue" | "red" | "yellow" | "orange"
+  >("blue");
   const [waybillDetails, setWaybillDetails] = useState<any>({});
   const [success, setSuccess] = useState(false);
   const { clientData } = useLocalSearchParams();
@@ -54,7 +72,7 @@ export default function CustomersScreen() {
   const [attemptsLoading, setAttemptsLoading] = useState(false);
   const [attempts, setAttempts] = useState<any>("");
   const [attemptsMessage, setAttemptsMessage] = useState<any>("");
-  const [attemptReached, setAttemptReached] = useState<Boolean>(false);
+  const [attemptReached, setAttemptReached] = useState<boolean>(false);
   const [previewReady, setPreviewReady] = useState(false);
   const [orderNumber, setOrderNumber] = useState<any>("");
   const [permission, requestPermission] = useCameraPermissions();
@@ -71,6 +89,7 @@ export default function CustomersScreen() {
     latitude: number;
     longitude: number;
   } | null>(null);
+  const [scanCount, setScanCount] = useState(0);
 
   const bottomDrawerRef = useRef<any>(null);
   const cameraButtomDrawer = useRef<any>(null);
@@ -78,6 +97,23 @@ export default function CustomersScreen() {
   console.log(">>>> ", showReturn);
 
   const bottomDrawerForReturnref = useRef<any>(null);
+
+  // Intercept Android back button and always return to Home
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        router.back();
+        return true; // prevent default stack navigation
+      };
+
+      const subscription = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress,
+      );
+
+      return () => subscription.remove();
+    }, [router]),
+  );
 
   const openCameraDrawer = () => {
     setShowScanner(false); // Unmount scanner first
@@ -221,7 +257,6 @@ export default function CustomersScreen() {
           );
           setOrderNumber(data?.data);
           console.log("waybillData : >>> ", waybillData);
-          // validation: delivery area (barangay) should be same as the parcel destination barangay
           if (waybillData.waybillStatus === "Delivering") {
             if (
               userData.assignedBarangays.includes(waybillData.receiverBarangay)
@@ -233,13 +268,19 @@ export default function CustomersScreen() {
               setWaybillDetails(waybillData);
               bottomDrawerRef.current?.open();
               setScanResultMessage("Successfully Scanned!");
+              setAlertColor("green");
+              setScanCount((prev) => prev + 1);
             } else {
               setInvalid(true);
               setAlertColor("red");
               playError();
             }
           } else {
-            setScanResultMessage(`This item is ${waybillData.waybillStatus}`);
+            setScanResultMessage(
+              waybillData.waybillStatus
+                ? `This item is ${waybillData.waybillStatus}`
+                : "This Item Has no Waybill Status yet",
+            );
             setInvalid(true);
             setAlertColor("red");
             playError();
@@ -252,7 +293,6 @@ export default function CustomersScreen() {
           setScanned(false);
         } catch (error) {
           setLoadingScan(false);
-
           setScanResultMessage("ERROR SCAN");
           console.log("Customer Scan ERROR : >> ", error);
           setScanned(false);
@@ -262,7 +302,7 @@ export default function CustomersScreen() {
           setTimeout(() => {
             setScanned(false);
             setData("");
-          }, 2000);
+          }, 5000);
         }
       }
     }
@@ -280,7 +320,6 @@ export default function CustomersScreen() {
         return;
       }
 
-      // allow overlay render
       await new Promise((resolve) => setTimeout(resolve, 300));
 
       const tmpUri = await captureRef(viewShotRef.current, {
@@ -291,7 +330,6 @@ export default function CustomersScreen() {
 
       const uniqueUri = FileSystem?.cacheDirectory + `pod-${Date.now()}.jpg`;
 
-      // Copy snapshot into new unique file
       await FileSystem.copyAsync({
         from: tmpUri,
         to: uniqueUri,
@@ -301,7 +339,6 @@ export default function CustomersScreen() {
 
       const formData = new FormData();
 
-      // Construct the file object correctly for React Native
       const filename = finalImageUri.split("/").pop();
       const match = /\.(\w+)$/.exec(filename || "");
       const type = match ? `image/${match[1]}` : `image`;
@@ -309,7 +346,6 @@ export default function CustomersScreen() {
       formData.append("orderTransactionId", waybillDetails.orderTransactionId);
       formData.append("waybillStatus", status);
       console.log("finalImageUri : >>> ", finalImageUri);
-      // DO NOT use a Blob; use this object format:
       formData.append("image", {
         uri: finalImageUri,
         name: filename,
@@ -328,7 +364,6 @@ export default function CustomersScreen() {
       if (responseData?.message === "Successfully Updated") {
         setSuccess(true);
         if (status === "Delivered") {
-          // log scanned data for cds
           const logScanData = await axiosInstance(userData.token).post(
             `/api/log-scan`,
             {
@@ -352,7 +387,7 @@ export default function CustomersScreen() {
       setPreviewKey((prev) => prev + 1);
       setPhotoUri(null);
       setTimeout(() => {
-        setShowScanner(true); // Re-mount scanner after drawer closes
+        setShowScanner(true);
       }, 300);
     } catch (error) {
       setPhotoUri(null);
@@ -361,6 +396,7 @@ export default function CustomersScreen() {
 
     setLoading(false);
   };
+
   const onCloseBottomDrawer = () => {
     setLoadingScan(false);
     setSuccess(false);
@@ -384,15 +420,6 @@ export default function CustomersScreen() {
         skipProcessing: true,
       });
       setPreviewReady(false);
-      // const locationPermission =
-      //   await Location.requestForegroundPermissionsAsync();
-      // if (locationPermission.status === "granted") {
-      //   const location = await Location.getCurrentPositionAsync({});
-      //   setCoords({
-      //     latitude: location.coords.latitude,
-      //     longitude: location.coords.longitude,
-      //   });
-      // }
 
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
@@ -401,10 +428,8 @@ export default function CustomersScreen() {
         throw new Error("Permission denied");
       }
 
-      // Try last known position first
       let loc: any = await Location.getLastKnownPositionAsync();
       if (!loc) {
-        // race between getCurrentPositionAsync and timeout
         const timeout = new Promise((_, reject) =>
           setTimeout(() => reject(new Error("timed out")), 15000),
         );
@@ -422,7 +447,6 @@ export default function CustomersScreen() {
       });
 
       setPhotoUri(photo.uri);
-
       setImageCapturingloading(false);
     } catch (err) {
       setImageCapturingloading(false);
@@ -447,35 +471,36 @@ export default function CustomersScreen() {
     );
   }
 
-  // ✅ Cancel the last captured photo
   const cancelPhoto = () => {
     setPhotoUri(null);
     setCoords(null);
   };
 
-  // ✅ Submit handler
   const submitPhoto = () => {
     if (!photoUri) return;
     onUpdateWaybillStatus("Delivered");
-
-    // Add your API or dispatch logic here
   };
-  const newLocal = "green";
+
+  const colors = ALERT_COLORS[alertColor] ?? ALERT_COLORS.green;
+
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Ionicons name="chevron-back" size={24} color="#3498db" />
+          <Ionicons name="arrow-back" size={22} color="#1F2937" />
         </TouchableOpacity>
         <View style={styles.headerTextContainer}>
           <Text style={styles.title}>Customer Delivery</Text>
           <Text style={styles.subtitle}>Scan orders for delivery</Text>
         </View>
+        <View style={{ width: 40 }} />
       </View>
 
+      {/* SCANNER */}
       <View style={styles.scannerContainer}>
         {showScanner && (
           <BarcodeScanner
@@ -486,11 +511,28 @@ export default function CustomersScreen() {
         )}
       </View>
 
+      {/* SCAN COUNT */}
+      <View style={styles.scanCountContainer}>
+        <View style={styles.scanCountCard}>
+          <Text style={styles.scanCountNumber}>{scanCount}</Text>
+          <Text style={styles.scanCountLabel}>
+            {scanCount === 1 ? "Item Scanned" : "Items Scanned"}
+          </Text>
+        </View>
+      </View>
+
+      {/* SCANNING STATUS */}
       <View style={styles.statusContainer}>
         <View
           style={[
             styles.statusIndicator,
-            { backgroundColor: scanned ? "#ef4444" : "#22c55e" },
+            {
+              backgroundColor: loadingScan
+                ? "#f59e0b"
+                : scanned
+                  ? "#ef4444"
+                  : "#22c55e",
+            },
           ]}
         />
         <Text style={styles.statusText}>
@@ -502,29 +544,27 @@ export default function CustomersScreen() {
         </Text>
       </View>
 
-      {scanResultMessage && (
+      {/* SCAN RESULT ALERT */}
+      {data ? (
         <View
           style={[
-            styles.resultContainer,
-            invalid ? styles.errorBg : styles.successBg,
+            styles.resultAlert,
+            { borderColor: colors.border, backgroundColor: colors.bg },
           ]}
         >
-          <Ionicons
-            name={invalid ? "close-circle" : "checkmark-circle"}
-            size={20}
-            color={invalid ? "#e74c3c" : "#27ae60"}
-          />
-          <Text
-            style={[
-              styles.resultText,
-              invalid ? styles.errorColor : styles.successColor,
-            ]}
-          >
-            {scanResultMessage}
-          </Text>
+          {loadingScan ? (
+            <Text style={[styles.resultText, { color: colors.text }]}>
+              Scanning...
+            </Text>
+          ) : (
+            <Text style={[styles.resultText, { color: colors.text }]}>
+              {scanResultMessage}
+            </Text>
+          )}
         </View>
-      )}
+      ) : null}
 
+      {/* BOTTOM DRAWER - Order Details */}
       <BottomDrawer
         ref={bottomDrawerRef}
         initialHeight={570}
@@ -542,7 +582,7 @@ export default function CustomersScreen() {
                     padding: 20,
                     borderRadius: 20,
                     alignItems: "center",
-                    backgroundColor: "#33ad60",
+                    backgroundColor: "#22c55e",
                     width: 300,
                     marginBottom: 10,
                   }}
@@ -552,6 +592,8 @@ export default function CustomersScreen() {
                       textAlign: "center",
                       width: "90%",
                       color: "white",
+                      fontWeight: "600",
+                      fontSize: 15,
                     }}
                   >
                     {scanResultMessage}
@@ -559,13 +601,13 @@ export default function CustomersScreen() {
                 </View>
               </View>
             )}
-            {/* Order Card */}
 
+            {/* Order Card */}
             <View style={styles.card}>
               <View>
                 <Text>
-                  <Text style={{ fontWeight: "bold" }}>Delivery Attemps</Text> :{" "}
-                  {attempts.toUpperCase()}
+                  <Text style={{ fontWeight: "bold" }}>Delivery Attempts</Text>{" "}
+                  : {attempts.toUpperCase()}
                 </Text>
               </View>
               <Text style={styles.boldText}>{waybillDetails?.itemName}</Text>
@@ -590,7 +632,6 @@ export default function CustomersScreen() {
 
               <Text>
                 <Text style={{ fontWeight: "bold" }}> Recipient: </Text>
-
                 {`${waybillDetails?.receiverFirstName} ${waybillDetails?.receiverMiddleName} ${waybillDetails?.receiverLastName}`}
               </Text>
 
@@ -618,7 +659,6 @@ export default function CustomersScreen() {
                   <>
                     <TouchableOpacity
                       style={[styles.button, styles.successButton]}
-                      // onPress={() => onUpdateWaybillStatus("Delivered")}
                       onPress={() => openCameraDrawer()}
                     >
                       <Text style={styles.buttonText}>Mark As Delivered</Text>
@@ -671,6 +711,7 @@ export default function CustomersScreen() {
         </View>
       </BottomDrawer>
 
+      {/* BOTTOM DRAWER - Camera/POD */}
       <BottomDrawer
         ref={cameraButtomDrawer}
         initialHeight={650}
@@ -696,7 +737,7 @@ export default function CustomersScreen() {
               <View collapsable={false}>
                 <Image
                   onLoadEnd={() => setPreviewReady(true)}
-                  source={{ uri: photoUri || '' }}
+                  source={{ uri: photoUri || "" }}
                   style={styles.camera}
                 />
 
@@ -766,13 +807,9 @@ export default function CustomersScreen() {
               </TouchableOpacity>
             ) : (
               <>
-                <TouchableOpacity
-                  // style={[styles.button, styles.successButton]}
-                  onPress={submitPhoto}
-                  disabled={loading}
-                >
+                <TouchableOpacity onPress={submitPhoto} disabled={loading}>
                   <Button
-                    buttonColor="#4CAF50"
+                    buttonColor="#22c55e"
                     textColor="white"
                     onPress={submitPhoto}
                     mode="contained"
@@ -789,7 +826,7 @@ export default function CustomersScreen() {
                   disabled={loading}
                 >
                   <Button
-                    buttonColor="#f44336"
+                    buttonColor="#dc2626"
                     textColor="white"
                     onPress={cancelPhoto}
                     mode="contained"
@@ -845,7 +882,7 @@ export default function CustomersScreen() {
           )}
           <View style={{ gap: 10 }}>
             <Button
-              buttonColor="green"
+              buttonColor="#22c55e"
               textColor="white"
               onPress={onSave}
               mode="contained"
@@ -865,62 +902,96 @@ export default function CustomersScreen() {
           </View>
         </ScrollView>
       </AnimatedDrawer>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f5f7fa" },
+  container: { flex: 1, backgroundColor: "#F8FAFC" },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: 50,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
   },
   headerTextContainer: { flex: 1 },
   backButton: {
     width: 40,
     height: 40,
+    borderRadius: 12,
+    backgroundColor: "#F1F5F9",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 8,
+    marginRight: 10,
   },
-  title: { fontSize: 22, fontWeight: "700", color: "#2c3e50" },
-  subtitle: { fontSize: 13, color: "#7f8c8d", marginTop: 2 },
-  scannerContainer: { flex: 1, margin: 20, borderRadius: 16, overflow: "hidden" },
+  title: { fontSize: 18, fontWeight: "700", color: "#0F172A" },
+  subtitle: { fontSize: 12, color: "#94A3B8", marginTop: 1 },
+  scannerContainer: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+  scanCountContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  scanCountCard: {
+    backgroundColor: "#fff",
+    paddingVertical: 10,
+    paddingHorizontal: 32,
+    borderRadius: 14,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#D1FAE5",
+    shadowColor: "#22c55e",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  scanCountNumber: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#22c55e",
+  },
+  scanCountLabel: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#64748B",
+    marginTop: 2,
+  },
   statusContainer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 12,
-    marginHorizontal: 20,
-    marginBottom: 12,
-    backgroundColor: "#fff",
+    alignSelf: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    marginTop: 10,
     borderRadius: 12,
+    backgroundColor: "#F0FDF4",
   },
-  statusIndicator: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },
-  statusText: { fontSize: 14, fontWeight: "600", color: "#2c3e50" },
-  resultContainer: {
-    flexDirection: "row",
+  statusIndicator: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
+  statusText: { fontSize: 14, fontWeight: "600", color: "#15803D" },
+  resultAlert: {
+    marginTop: 12,
+    marginHorizontal: 16,
+    padding: 16,
+    borderRadius: 14,
+    borderWidth: 2,
     alignItems: "center",
-    gap: 8,
-    marginHorizontal: 20,
-    marginBottom: 12,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
   },
-  errorBg: { backgroundColor: "#fee", borderColor: "#fcc" },
-  successBg: { backgroundColor: "#d4edda", borderColor: "#c3e6cb" },
-  resultText: { flex: 1, fontSize: 14, fontWeight: "600" },
-  errorColor: { color: "#e74c3c" },
-  successColor: { color: "#27ae60" },
+  resultText: { fontSize: 15, fontWeight: "600", textAlign: "center" },
   buttonText: { color: "#fff", fontWeight: "bold" },
-  successButton: { backgroundColor: "#4CAF50" },
-  cancelButton: { backgroundColor: "#f44336" },
-  submitButton: { backgroundColor: "#2196F3" },
+  successButton: { backgroundColor: "#22c55e" },
+  cancelButton: { backgroundColor: "#dc2626" },
+  submitButton: { backgroundColor: "#22c55e" },
   closeButton: { backgroundColor: "#9E9E9E" },
   camera: {
     width: "100%",
@@ -939,17 +1010,13 @@ const styles = StyleSheet.create({
     gap: 10,
     alignItems: "flex-end",
   },
-  coordText: {
-    color: "#fff",
-    fontWeight: "bold",
-  },
+  coordText: { color: "#fff", fontWeight: "bold" },
   bottom: {
     position: "absolute",
     bottom: 40,
     width: "100%",
     alignItems: "center",
   },
-
   message: { textAlign: "center", paddingBottom: 10 },
   buttonContainer: {
     position: "absolute",
@@ -961,15 +1028,26 @@ const styles = StyleSheet.create({
   },
   text: { fontSize: 24, fontWeight: "bold", color: "white" },
   content: { marginTop: 40, justifyContent: "center", alignItems: "center" },
-  description: { fontSize: 16, textAlign: "center", marginTop: 20, opacity: 0.8 },
-  resultAlert: {
-    marginTop: 10,
-    marginHorizontal: 12,
-    padding: 10,
-    borderRadius: 8,
-    borderWidth: 2,
-    alignItems: "center",
+  description: {
+    fontSize: 16,
+    textAlign: "center",
+    marginTop: 20,
+    opacity: 0.8,
   },
+  resultContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  errorBg: { backgroundColor: "#fee", borderColor: "#fcc" },
+  successBg: { backgroundColor: "#d4edda", borderColor: "#c3e6cb" },
+  errorColor: { color: "#e74c3c" },
+  successColor: { color: "#27ae60" },
   containerTwo: {
     backgroundColor: "#fff",
     height: 500,
@@ -983,51 +1061,25 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     gap: 10,
   },
-  boldText: {
-    fontWeight: "bold",
-    fontSize: 16,
-    marginBottom: 4,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: "#e5e7eb",
-    marginVertical: 10,
-  },
+  boldText: { fontWeight: "bold", fontSize: 16, marginBottom: 4 },
+  divider: { height: 1, backgroundColor: "#e5e7eb", marginVertical: 10 },
   verticalDivider: {
     width: 1,
     height: 14,
     backgroundColor: "#e5e7eb",
     marginHorizontal: 8,
   },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  center: {
-    alignItems: "center",
-    marginVertical: 20,
-  },
+  row: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
+  center: { alignItems: "center", marginVertical: 20 },
   button: {
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: "center",
     marginVertical: 6,
   },
-
-  warningButton: {
-    backgroundColor: "#f59e0b",
-  },
-
-  successText: {
-    fontSize: 32,
-    marginBottom: 8,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 8,
-  },
+  warningButton: { backgroundColor: "#f59e0b" },
+  successText: { fontSize: 32, marginBottom: 8 },
+  label: { fontSize: 16, fontWeight: "600", marginBottom: 8 },
   textArea: {
     height: 120,
     borderWidth: 1,
