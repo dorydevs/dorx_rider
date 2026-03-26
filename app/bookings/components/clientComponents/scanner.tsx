@@ -11,11 +11,11 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
   useWindowDimensions,
 } from "react-native";
 import BottomDrawer from "react-native-animated-bottom-drawer";
-import { Button } from "react-native-paper";
 
 type ClientData = any;
 const SheetItem = ({ label, value }: { label: string; value?: any }) => (
@@ -170,9 +170,7 @@ export default function scanClientScheduledParcel() {
 
         const transactionPayload = {
           status: "picked-up",
-          scannedDate: moment()
-            .utcOffset("+08:00")
-            .format("YYYY-MM-DD HH:mm:ss"),
+          scannedDate: moment().format("YYYY-MM-DD HH:mm:ss"),
           riderId: userData.id,
           orderTransactionId: validationResponse.data.orderTransactionId,
         };
@@ -364,7 +362,7 @@ export default function scanClientScheduledParcel() {
       )}
       <BottomDrawer
         ref={bottomDrawerRef}
-        initialHeight={560}
+        initialHeight={540}
         enableSnapping={false}
         handleComponent={() => null}
         customStyles={{
@@ -491,14 +489,14 @@ export default function scanClientScheduledParcel() {
 
                 <Divider />
 
-                <Button
+                {/* <Button
                   onPress={() => bottomDrawerClose()}
                   buttonColor="green"
                   mode="contained"
                   textColor="white"
                 >
                   Close
-                </Button>
+                </Button> */}
               </View>
             )}
           </ScrollView>
@@ -616,8 +614,28 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 16,
   },
+  drawerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+    backgroundColor: "#fff",
+  },
+  drawerHeaderTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#2c3e50",
+  },
+  closeButton: {
+    padding: 4,
+  },
   drawerContent: {
     padding: 20,
+    paddingBottom: 40,
   },
   successBanner: {
     backgroundColor: "#22c55e",
