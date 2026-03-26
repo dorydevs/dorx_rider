@@ -7,6 +7,18 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+const ALERT_COLORS: Record<
+  string,
+  { border: string; bg: string; text: string }
+> = {
+  green: { border: "#16a34a", bg: "#22c55e", text: "#ffffff" },
+  red: { border: "#dc2626", bg: "#dc2626", text: "#ffffff" },
+  yellow: { border: "#d97706", bg: "#f59e0b", text: "#ffffff" },
+  orange: { border: "#ea580c", bg: "#f97316", text: "#ffffff" },
+};
+
 export default function RTSReturnToClientScreen() {
   const router = useRouter();
 
@@ -79,13 +91,14 @@ export default function RTSReturnToClientScreen() {
             `✓ RTS item successfully received from customer.`,
           );
           setAlertColor("green");
+          setScanCount((prev) => prev + 1);
           playSuccess();
           setLoadingScan(false);
           setScanned(false);
           setTimeout(() => {
             setScanResultMessage("");
             setData("");
-          }, 3000);
+          }, 5000);
         } catch (error: any) {
           console.error("RTS INCOMING SCANNING ERROR:", error);
           playError();
@@ -125,8 +138,8 @@ export default function RTSReturnToClientScreen() {
           }, 5000);
         }
       } else {
-        setScanResultMessage("⚠ This item has already been scanned.");
-        setAlertColor("yellow");
+        setScanResultMessage("This item has already been scanned.");
+        setAlertColor("orange");
         playWarning();
         setScanned(false);
         setLoadingScan(false);
@@ -134,7 +147,7 @@ export default function RTSReturnToClientScreen() {
           setScanResultMessage("");
           setScanned(false);
           setData("");
-        }, 3000);
+        }, 10000);
       }
     }
 
@@ -143,8 +156,11 @@ export default function RTSReturnToClientScreen() {
     }
   }, [data, userData]);
 
+  const colors = ALERT_COLORS[alertColor] ?? ALERT_COLORS.green;
+
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -156,10 +172,19 @@ export default function RTSReturnToClientScreen() {
           <Text style={styles.title}>RTS Incoming</Text>
           <Text style={styles.subtitle}>Scan incoming RTS from customers</Text>
         </View>
+        <View style={{ width: 40 }} />
       </View>
 
-      <View style={styles.scannerContainer}>
-        <BarcodeScanner onScan={onScan} scanned={scanned} />
+      <BarcodeScanner onScan={onScan} scanned={scanned} />
+
+      {/* SCAN COUNT */}
+      <View style={styles.scanCountContainer}>
+        <View style={styles.scanCountCard}>
+          <Text style={styles.scanCountNumber}>{scanCount}</Text>
+          <Text style={styles.scanCountLabel}>
+            {scanCount === 1 ? "Item Scanned" : "Items Scanned"}
+          </Text>
+        </View>
       </View>
 
       <View style={styles.statusContainer}>
@@ -220,12 +245,12 @@ export default function RTSReturnToClientScreen() {
           </Text>
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f5f7fa" },
+  container: { flex: 1, backgroundColor: "#F8FAFC" },
   header: {
     flexDirection: "row",
     alignItems: "center",
