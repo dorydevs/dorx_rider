@@ -354,8 +354,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
+  },
+  headerTextContainer: {
+    flex: 1,
+    marginBottom: 20,
   },
   backButton: {
     width: 40,
