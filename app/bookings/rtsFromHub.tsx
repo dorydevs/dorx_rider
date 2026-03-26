@@ -7,6 +7,18 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+const ALERT_COLORS: Record<
+  string,
+  { border: string; bg: string; text: string }
+> = {
+  green: { border: "#16a34a", bg: "#22c55e", text: "#ffffff" },
+  red: { border: "#dc2626", bg: "#dc2626", text: "#ffffff" },
+  yellow: { border: "#d97706", bg: "#f59e0b", text: "#ffffff" },
+  orange: { border: "#ea580c", bg: "#f97316", text: "#ffffff" },
+};
+
 export default function RtsFromHub() {
   const router = useRouter();
   const { playSuccess, playError, playWarning } = useScannerSounds();
@@ -18,9 +30,10 @@ export default function RtsFromHub() {
   const [loadingScan, setLoadingScan] = useState(false);
   const [scanResultMessage, setScanResultMessage] = useState("");
   const [scannedData, setScannedData] = useState<string[]>([]);
-  const [alertColor, setAlertColor] = useState<"green" | "yellow" | "red">(
-    "green",
-  );
+  const [alertColor, setAlertColor] = useState<
+    "green" | "yellow" | "red" | "orange"
+  >("green");
+  const [scanCount, setScanCount] = useState(0);
 
   const onScan = async (scannedCode: any) => {
     if (scanned) return;
@@ -51,7 +64,9 @@ export default function RtsFromHub() {
           // Validate RTS status
           if (orderDetail.data.rtsStatus !== "Received by hub") {
             setScanResultMessage(
-              `Cannot scan: Item status is "${orderDetail.data.rtsStatus}". Only items with "Received by hub" status can be scanned.`,
+              orderDetail.data.rtsStatus
+                ? `Cannot scan: Item status is "${orderDetail.data.rtsStatus}". Only items with "Received by hub" status can be scanned.`
+                : "Item is not for return",
             );
             setAlertColor("yellow");
             playWarning();
@@ -60,7 +75,7 @@ export default function RtsFromHub() {
             setTimeout(() => {
               setScanResultMessage("");
               setData("");
-            }, 4000);
+            }, 7000);
             return;
           }
 
@@ -77,7 +92,7 @@ export default function RtsFromHub() {
             setTimeout(() => {
               setScanResultMessage("");
               setData("");
-            }, 4000);
+            }, 7000);
             return;
           }
 
@@ -89,15 +104,16 @@ export default function RtsFromHub() {
           playSuccess();
           setScannedData((prev) => [...prev, data.data]);
           setScanResultMessage(
-            `✓ Item successfully scanned! Destination: ${orderDetail.data.receiverBarangay}`,
+            `Item successfully scanned! Destination: ${orderDetail.data.senderBarangay}`,
           );
           setAlertColor("green");
+          setScanCount((prev) => prev + 1);
           setLoadingScan(false);
           setScanned(false);
           setTimeout(() => {
             setScanResultMessage("");
             setData("");
-          }, 3000);
+          }, 5000);
         } catch (error: any) {
           console.error("RTS FROM HUB SCANNING ERROR:", error);
           playError();
@@ -133,11 +149,11 @@ export default function RtsFromHub() {
           setTimeout(() => {
             setScanResultMessage("");
             setData("");
-          }, 5000);
+          }, 7000);
         }
       } else {
-        setScanResultMessage("⚠ This item has already been scanned.");
-        setAlertColor("yellow");
+        setScanResultMessage("This item has already been scanned.");
+        setAlertColor("orange");
         playWarning();
         setScanned(false);
         setLoadingScan(false);
@@ -145,7 +161,7 @@ export default function RtsFromHub() {
           setScanResultMessage("");
           setScanned(false);
           setData("");
-        }, 3000);
+        }, 10000);
       }
     }
 
@@ -171,30 +187,49 @@ export default function RtsFromHub() {
     loadUserData();
   }, [user]);
 
+  const colors = ALERT_COLORS[alertColor] ?? ALERT_COLORS.green;
+
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Ionicons name="chevron-back" size={24} color="#22c55e" />
+          <Ionicons name="arrow-back" size={22} color="#1F2937" />
         </TouchableOpacity>
         <View style={styles.headerTextContainer}>
           <Text style={styles.title}>RTS from Hub</Text>
           <Text style={styles.subtitle}>Scan items received from hub</Text>
         </View>
+        <View style={{ width: 40 }} />
       </View>
 
-      <View style={styles.scannerContainer}>
-        <BarcodeScanner onScan={onScan} scanned={scanned} />
+      <BarcodeScanner onScan={onScan} scanned={scanned} />
+
+      {/* SCAN COUNT */}
+      <View style={styles.scanCountContainer}>
+        <View style={styles.scanCountCard}>
+          <Text style={styles.scanCountNumber}>{scanCount}</Text>
+          <Text style={styles.scanCountLabel}>
+            {scanCount === 1 ? "Item Scanned" : "Items Scanned"}
+          </Text>
+        </View>
       </View>
 
+      {/* SCANNING STATUS */}
       <View style={styles.statusContainer}>
         <View
           style={[
             styles.statusIndicator,
-            { backgroundColor: scanned ? "#ef4444" : "#22c55e" },
+            {
+              backgroundColor: loadingScan
+                ? "#f59e0b"
+                : scanned
+                  ? "#ef4444"
+                  : "#22c55e",
+            },
           ]}
         />
         <Text style={styles.statusText}>
@@ -206,125 +241,107 @@ export default function RtsFromHub() {
         </Text>
       </View>
 
-      {scanResultMessage && (
+      {/* SCAN RESULT ALERT */}
+      {data && (
         <View
           style={[
-            styles.resultContainer,
-            alertColor === "green"
-              ? styles.successBg
-              : alertColor === "yellow"
-                ? styles.warningBg
-                : styles.errorBg,
+            styles.resultAlert,
+            { borderColor: colors.border, backgroundColor: colors.bg },
           ]}
         >
-          <Ionicons
-            name={
-              alertColor === "green"
-                ? "checkmark-circle"
-                : alertColor === "yellow"
-                  ? "warning"
-                  : "close-circle"
-            }
-            size={24}
-            color={
-              alertColor === "green"
-                ? "#22c55e"
-                : alertColor === "yellow"
-                  ? "#f39c12"
-                  : "#e74c3c"
-            }
-          />
-          <Text
-            style={[
-              styles.resultText,
-              alertColor === "green"
-                ? styles.successColor
-                : alertColor === "yellow"
-                  ? styles.warningColor
-                  : styles.errorColor,
-            ]}
-          >
-            {scanResultMessage}
-          </Text>
+          {loadingScan ? (
+            <Text style={[styles.resultText, { color: colors.text }]}>
+              Scanning...
+            </Text>
+          ) : (
+            <Text style={[styles.resultText, { color: colors.text }]}>
+              {scanResultMessage}
+            </Text>
+          )}
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f5f7fa" },
+  container: { flex: 1, backgroundColor: "#F8FAFC" },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: 50,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
   },
   headerTextContainer: { flex: 1 },
   backButton: {
     width: 40,
     height: 40,
+    borderRadius: 12,
+    backgroundColor: "#F1F5F9",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 8,
+    marginRight: 10,
   },
-  title: { fontSize: 22, fontWeight: "700", color: "#2c3e50" },
-  subtitle: { fontSize: 13, color: "#7f8c8d", marginTop: 2 },
-  scannerContainer: {
-    flex: 1,
-    margin: 20,
-    borderRadius: 16,
-    overflow: "hidden",
+  title: { fontSize: 18, fontWeight: "700", color: "#0F172A" },
+  subtitle: { fontSize: 12, color: "#94A3B8", marginTop: 1 },
+  scanCountContainer: {
+    alignItems: "center",
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  scanCountCard: {
+    backgroundColor: "#fff",
+    paddingVertical: 10,
+    paddingHorizontal: 32,
+    borderRadius: 14,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#D1FAE5",
+    shadowColor: "#22c55e",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  scanCountNumber: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#22c55e",
+  },
+  scanCountLabel: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#64748B",
+    marginTop: 2,
   },
   statusContainer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 12,
-    marginHorizontal: 20,
-    marginBottom: 12,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-  },
-  statusIndicator: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },
-  statusText: { fontSize: 14, fontWeight: "600", color: "#2c3e50" },
-  resultContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginHorizontal: 20,
-    marginBottom: 12,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  errorBg: { backgroundColor: "#fee2e2", borderColor: "#ef4444" },
-  successBg: { backgroundColor: "#d1fae5", borderColor: "#22c55e" },
-  warningBg: { backgroundColor: "#fef3c7", borderColor: "#f59e0b" },
-  resultText: { flex: 1, fontSize: 14, fontWeight: "600", lineHeight: 20 },
-  errorColor: { color: "#dc2626" },
-  successColor: { color: "#16a34a" },
-  warningColor: { color: "#d97706" },
-  content: { marginTop: 40, justifyContent: "center", alignItems: "center" },
-  description: {
-    fontSize: 16,
-    textAlign: "center",
-    marginTop: 20,
-    opacity: 0.8,
-  },
-  resultAlert: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
     marginTop: 10,
-    marginHorizontal: 12,
-    padding: 10,
-    borderRadius: 8,
+    marginHorizontal: 40,
+    borderRadius: 12,
+    backgroundColor: "#F0FDF4",
+  },
+  statusIndicator: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
+  statusText: { fontSize: 14, fontWeight: "600", color: "#15803D" },
+  resultAlert: {
+    marginTop: 12,
+    marginHorizontal: 16,
+    padding: 16,
+    borderRadius: 14,
     borderWidth: 2,
     alignItems: "center",
+  },
+  resultText: {
+    fontSize: 15,
+    fontWeight: "600",
+    textAlign: "center",
+    color: "#ffffff",
   },
 });
