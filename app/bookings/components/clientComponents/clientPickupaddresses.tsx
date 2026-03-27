@@ -83,7 +83,7 @@ export default function ClientScreen() {
           </View>
           <View>
             <Text style={{ opacity: 0.5, fontSize: 13 }}>
-              Total Items: : {client.total}
+              Total {client.total === 1 ? "Item" : "Items"}: {client.total}
             </Text>
           </View>
         </View>
