@@ -32,7 +32,7 @@ const Divider = () => (
 export default function scanClientScheduledParcel() {
   const { playSuccess, playError, playWarning } = useScannerSounds();
   const router = useRouter();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const { clientData, clientScheduledToPickUpData, ScheduledData } =
     useLocalSearchParams();
   const bottomDrawerRef = useRef<{
@@ -65,11 +65,8 @@ export default function scanClientScheduledParcel() {
     ? JSON.parse(clientScheduledToPickUpData as string)
     : null;
 
-  console.log(clientScheduledData);
-
   const onScan = async (scannedCode: any) => {
     if (scanned) return;
-
     setScanned(true);
     setData(scannedCode);
   };
@@ -87,13 +84,8 @@ export default function scanClientScheduledParcel() {
         console.error("Error loading user data:", error);
       }
     };
-
     loadUserData();
   }, [user]);
-
-  console.log("userInfo : >> ", userData);
-
-  console.log("client : >> ", clientScheduledToPickUp);
 
   useEffect(() => {
     async function processScan() {
@@ -115,7 +107,6 @@ export default function scanClientScheduledParcel() {
       setScanResultMessage("");
 
       try {
-        // Validate order number
         const validationResponse = await axiosInstance(userData?.token).get(
           `/api/orderTransactions/fetchOrderTransactionByOrderNumber?orderNumber=${data.data}&clientId=${client.clientId}&pickupAddressId=${clientScheduledToPickUp.pickupAddressId}`,
         );
@@ -126,7 +117,6 @@ export default function scanClientScheduledParcel() {
 
         setSelectedItem(validationResponse.data);
 
-        // Validate order status
         if (validationResponse.data.orderStatus !== "Scheduled for Pickup") {
           setScanResultMessage(
             `Cannot scan: Order status is "${validationResponse.data.orderStatus}". Only orders with "Scheduled for Pickup" status can be scanned.`,
@@ -142,7 +132,6 @@ export default function scanClientScheduledParcel() {
           return;
         }
 
-        // Find order transaction
         const orderTransaction = clientScheduledData.orders.find(
           (d: any) => d.orderNumber === data.data,
         );
@@ -162,7 +151,6 @@ export default function scanClientScheduledParcel() {
           return;
         }
 
-        // Prepare payloads
         const scanPayload = {
           orderNumber: data.data,
           status: "Picked up by Rider",
@@ -175,19 +163,16 @@ export default function scanClientScheduledParcel() {
           orderTransactionId: validationResponse.data.orderTransactionId,
         };
 
-        // Create rider transaction
         await axiosInstance(userData.token).post(
           `/api/riderTransaction`,
           transactionPayload,
         );
 
-        // Update order status
         const scanResponse = await axiosInstance(userData.token).put(
           `/api/orderTransactions/scanWaybill`,
           scanPayload,
         );
 
-        // Log scanned data for CDS
         await axiosInstance(userData.token).post(`/api/log-scan`, {
           shippingFee: validationResponse.data.receivableFreight,
           transactionType: "inbound",
@@ -264,6 +249,9 @@ export default function scanClientScheduledParcel() {
     }
   };
 
+  // Explicit scroll height = drawer height minus header height (~60px)
+  const drawerScrollHeight = height * 0.75 - 60;
+
   return (
     <View style={styles.container}>
       {/* CAMERA */}
@@ -285,6 +273,7 @@ export default function scanClientScheduledParcel() {
               : "Ready to Scan"}
         </Text>
       </View>
+
       <View
         style={{
           padding: 20,
@@ -360,9 +349,10 @@ export default function scanClientScheduledParcel() {
           </Text>
         </View>
       )}
+
       <BottomDrawer
         ref={bottomDrawerRef}
-        initialHeight={540}
+        initialHeight={height * 0.75}
         enableSnapping={false}
         handleComponent={() => null}
         customStyles={{
@@ -375,132 +365,116 @@ export default function scanClientScheduledParcel() {
             shadowOpacity: 0.15,
             shadowRadius: 8,
             elevation: 8,
-            borderWidth: 0,
-            borderTopWidth: 0,
             overflow: "hidden",
           },
           drawerContainer: {
+            flex: 1,
             backgroundColor: "#fff",
-            borderWidth: 0,
-            borderTopWidth: 0,
             paddingTop: 0,
             marginTop: 0,
           },
-          handle: {
-            display: "none",
-            height: 0,
-            width: 0,
-            backgroundColor: "transparent",
-          },
-          handleIndicator: {
-            display: "none",
-            height: 0,
-            width: 0,
-            backgroundColor: "transparent",
-          },
+          handle: { display: "none" },
+          handleIndicator: { display: "none" },
         }}
       >
-        <View
-          style={{ backgroundColor: "#fff", marginTop: -20, paddingTop: 20 }}
-        >
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.drawerContent}
+        {/* FIXED HEADER */}
+        <View style={styles.drawerHeader}>
+          <Text style={styles.drawerHeaderTitle}>Scan Details</Text>
+          <TouchableOpacity
+            onPress={bottomDrawerClose}
+            style={styles.closeButton}
           >
-            {scanResultMessage && (
-              <View style={styles.successBanner}>
-                <Text style={styles.successBannerText}>
-                  {scanResultMessage}
-                </Text>
-              </View>
-            )}
-            {selectedItem && (
-              <View>
-                <View style={styles.items}>
-                  <SheetItem label="Item Name" value={selectedItem.itemName} />
-                  <SheetItem
-                    label="Item Weight"
-                    value={selectedItem.itemWeight}
-                  />
-                  <SheetItem
-                    label="Number Of Items"
-                    value={selectedItem.numberOfItem}
-                  />
-                </View>
-
-                <Divider />
-                <View style={styles.items}>
-                  <SheetItem label="COD Value" value={selectedItem.codValue} />
-                  <SheetItem label="COD Fee" value={selectedItem.codFee} />
-                  <SheetItem
-                    label="Item Value"
-                    value={selectedItem.itemValue}
-                  />
-                </View>
-
-                <Divider />
-                <View style={styles.items}>
-                  <SheetItem
-                    label="Valuation Fee"
-                    value={selectedItem.valuationFee}
-                  />
-                  <SheetItem
-                    label="Receivable Freight"
-                    value={selectedItem.receivableFreight}
-                  />
-                </View>
-
-                <Divider />
-                <View style={styles.items}>
-                  <SheetItem
-                    label="Pouch Size"
-                    value={selectedItem.pouchesSize}
-                  />
-                  <SheetItem label="Remarks" value={selectedItem.remarks} />
-                </View>
-
-                <Divider />
-
-                <SheetItem
-                  label="Total Shipping Costs"
-                  value={selectedItem.totalShippingCost}
-                />
-                <Divider />
-                <SheetItem
-                  label="Waybill Number"
-                  value={selectedItem.waybillNumber}
-                />
-                <SheetItem
-                  label="Order Number"
-                  value={selectedItem.orderNumber}
-                />
-
-                <Divider />
-
-                <SheetItem label="Sender" value={selectedItem.senderName} />
-                <SheetItem
-                  label="Sender Phone"
-                  value={selectedItem.senderPhone}
-                />
-                <SheetItem
-                  label="Sender Address"
-                  value={`${selectedItem.senderProvince}, ${selectedItem.senderCity}, ${selectedItem.senderBarangay}`}
-                />
-
-                <Divider />
-
-                {/* <Button
-                  onPress={() => bottomDrawerClose()}
-                  buttonColor="green"
-                  mode="contained"
-                  textColor="white"
-                >
-                  Close
-                </Button> */}
-              </View>
-            )}
-          </ScrollView>
+            <Ionicons name="close-circle" size={28} color="#6b7280" />
+          </TouchableOpacity>
         </View>
+
+        {/* SCROLLABLE AREA */}
+        <ScrollView
+          nestedScrollEnabled={true}
+          showsVerticalScrollIndicator={true}
+          // Changed to flex: 1 so it automatically fills available space correctly
+          style={{ flex: 1 }}
+          contentContainerStyle={styles.drawerContent}
+        >
+          {scanResultMessage && (
+            <View style={styles.successBanner}>
+              <Text style={styles.successBannerText}>{scanResultMessage}</Text>
+            </View>
+          )}
+
+          {selectedItem && (
+            <View>
+              <View style={styles.items}>
+                <SheetItem label="Item Name" value={selectedItem.itemName} />
+                <SheetItem
+                  label="Item Weight"
+                  value={selectedItem.itemWeight}
+                />
+                <SheetItem
+                  label="Number Of Items"
+                  value={selectedItem.numberOfItem}
+                />
+              </View>
+
+              <Divider />
+              <View style={styles.items}>
+                <SheetItem label="COD Value" value={selectedItem.codValue} />
+                <SheetItem label="COD Fee" value={selectedItem.codFee} />
+                <SheetItem label="Item Value" value={selectedItem.itemValue} />
+              </View>
+
+              <Divider />
+              <View style={styles.items}>
+                <SheetItem
+                  label="Valuation Fee"
+                  value={selectedItem.valuationFee}
+                />
+                <SheetItem
+                  label="Receivable Freight"
+                  value={selectedItem.receivableFreight}
+                />
+              </View>
+
+              <Divider />
+              <View style={styles.items}>
+                <SheetItem
+                  label="Pouch Size"
+                  value={selectedItem.pouchesSize}
+                />
+                <SheetItem label="Remarks" value={selectedItem.remarks} />
+              </View>
+
+              <Divider />
+              <SheetItem
+                label="Total Shipping Costs"
+                value={selectedItem.totalShippingCost}
+              />
+
+              <Divider />
+              <SheetItem
+                label="Waybill Number"
+                value={selectedItem.waybillNumber}
+              />
+              <SheetItem
+                label="Order Number"
+                value={selectedItem.orderNumber}
+              />
+
+              <Divider />
+              <SheetItem label="Sender" value={selectedItem.senderName} />
+              <SheetItem
+                label="Sender Phone"
+                value={selectedItem.senderPhone}
+              />
+              <SheetItem
+                label="Sender Address"
+                value={`${selectedItem.senderProvince}, ${selectedItem.senderCity}, ${selectedItem.senderBarangay}`}
+              />
+
+              <Divider />
+            </View>
+          )}
+        </ScrollView>
       </BottomDrawer>
     </View>
   );
@@ -565,7 +539,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#333",
   },
-
   resultAlert: {
     marginTop: 20,
     marginHorizontal: 12,
@@ -605,15 +578,6 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 10,
   },
-  drawerHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: "#e8ecf1",
-    borderRadius: 2,
-    alignSelf: "center",
-    marginTop: 8,
-    marginBottom: 16,
-  },
   drawerHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -635,7 +599,7 @@ const styles = StyleSheet.create({
   },
   drawerContent: {
     padding: 20,
-    paddingBottom: 40,
+    paddingBottom: 80,
   },
   successBanner: {
     backgroundColor: "#22c55e",

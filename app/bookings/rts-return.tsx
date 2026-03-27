@@ -140,7 +140,7 @@ export default function RTSIncomingScreen() {
           playSuccess();
           setScannedData((prev) => [...prev, data.data]);
           setScanResultMessage(
-            `✓ Item successfully returned to client! Total: ${totalScannedCount + 1}`,
+            `✓ Item successfully returned to ${senderName}\nTotal: ${totalScannedCount + 1}`,
           );
           setAlertColor("green");
           setLoadingScan(false);
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: 50,
+    paddingTop: 10,
     paddingBottom: 16,
     paddingHorizontal: 20,
     backgroundColor: "#fff",
@@ -358,4 +358,34 @@ const styles = StyleSheet.create({
   errorColor: { color: "#dc2626" },
   successColor: { color: "#16a34a" },
   warningColor: { color: "#d97706" },
+  scanCountContainer: {
+    alignItems: "center",
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  scanCountCard: {
+    backgroundColor: "#fff",
+    paddingVertical: 10,
+    paddingHorizontal: 32,
+    borderRadius: 14,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#D1FAE5",
+    shadowColor: "#22c55e",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  scanCountNumber: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#22c55e",
+  },
+  scanCountLabel: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#64748B",
+    marginTop: 2,
+  },
 });

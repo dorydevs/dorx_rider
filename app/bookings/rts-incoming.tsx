@@ -30,6 +30,7 @@ export default function RTSReturnToClientScreen() {
   const [loadingScan, setLoadingScan] = useState(false);
   const [scanResultMessage, setScanResultMessage] = useState("");
   const [scannedData, setScannedData] = useState<string[]>([]);
+  const [scanCount, setScanCount] = useState(0);
   const [alertColor, setAlertColor] = useState<"green" | "yellow" | "red">(
     "green",
   );
@@ -254,7 +255,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: 50,
+    paddingTop: 10,
     paddingBottom: 16,
     paddingHorizontal: 20,
     backgroundColor: "#fff",
@@ -323,5 +324,35 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 2,
     alignItems: "center",
+  },
+  scanCountContainer: {
+    alignItems: "center",
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  scanCountCard: {
+    backgroundColor: "#fff",
+    paddingVertical: 10,
+    paddingHorizontal: 32,
+    borderRadius: 14,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#D1FAE5",
+    shadowColor: "#22c55e",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  scanCountNumber: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#22c55e",
+  },
+  scanCountLabel: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#64748B",
+    marginTop: 2,
   },
 });

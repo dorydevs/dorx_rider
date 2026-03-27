@@ -935,13 +935,14 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: "hidden",
   },
-  statusContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 12,
-    marginBottom: 4,
-  },
+  // statusContainer: {
+  //   flexDirection: "row",
+  //   alignItems: "center",
+  //   justifyContent: "center",
+  //   marginTop: 12,
+  //   marginBottom: 4,
+  // },
+
   scanCountCard: {
     backgroundColor: "#fff",
     paddingVertical: 10,
