@@ -1,6 +1,9 @@
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { useAppSelector } from "@/store/hooks";
+import socket from "@/utils/socket";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -8,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
 const cards = [
   {
     id: 1,
@@ -61,13 +65,111 @@ const cards = [
 
 export default function BookingsScreen() {
   const router = useRouter();
+  const [badgeCount, setBadgeCount] = useState(0);
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [userData, setUserData] = useState("");
+  const user = useAppSelector((state: any) => state.user.user);
+
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        const storedUser = await AsyncStorage.getItem("user");
+        if (storedUser) {
+          setUserData(JSON.parse(storedUser));
+        } else if (user) {
+          setUserData(user);
+        }
+      } catch (error) {
+        console.error("Error loading user data:", error);
+      } finally {
+        console.log("SUCCESS");
+      }
+    };
+
+    loadUserData();
+  }, [user]);
+
+  // badge count only no card opop-up message
+  useEffect(() => {
+    if (!userData) return;
+
+    const riderId = userData.id;
+
+    if (!socket.connected) {
+      socket.connect();
+    }
+
+    socket.on("connect", () => {
+      socket.emit("join_groupArea_room", { groupAreaId: riderId });
+    });
+
+    if (socket.connected) {
+      socket.emit("join_groupArea_room", { groupAreaId: riderId });
+    }
+
+    socket.on("new_parcel", (parcel) => {
+      setBadgeCount((prev) => prev + 1);
+    });
+
+    return () => {
+      socket.off("connect");
+      socket.off("new_parcel");
+    };
+  }, [userData]);
+
+  // badge count  with pop-up message
+  // useEffect(() => {
+  //   if (!userData) return;
+
+  //   const riderId = userData.id;
+  //   console.log(">>> connecting socket with riderId:", riderId);
+
+  //   if (!socket.connected) {
+  //     socket.connect();
+  //   }
+
+  //   socket.on("connect", () => {
+  //     console.log(">>> socket connected!", socket.id);
+  //     socket.emit("join_groupArea_room", { groupAreaId: riderId });
+  //   });
+
+  //   // rejoin room if already connected
+  //   if (socket.connected) {
+  //     socket.emit("join_groupArea_room", { groupAreaId: riderId });
+  //   }
+
+  //   socket.on("new_parcel", (parcel) => {
+  //     console.log(">>> new_parcel received!", parcel);
+  //     setToastMessage(
+  //       `New pickup: ${parcel.senderBarangay} - ${parcel.orderNumber}`,
+  //     );
+  //     setToastVisible(true);
+  //     setTimeout(() => setToastVisible(false), 3000);
+  //     setBadgeCount((prev) => prev + 1);
+  //   });
+
+  //   return () => {
+  //     socket.off("connect");
+  //     socket.off("new_parcel");
+  //   };
+  // }, [userData]);
 
   const handleCardPress = (card: (typeof cards)[number]) => {
+    if (card.id === 1) setBadgeCount(0);
     router.push(card.route as any);
   };
 
   return (
     <View style={styles.container}>
+      {/* Toast Notification */}
+      {toastVisible && (
+        <View style={styles.toast}>
+          <Ionicons name="notifications" size={18} color="#fff" />
+          <Text style={styles.toastText}>{toastMessage}</Text>
+        </View>
+      )}
+
       <View style={styles.headerSection}>
         <View style={styles.headerContent}>
           <View style={styles.headerIconContainer}>
@@ -90,17 +192,26 @@ export default function BookingsScreen() {
             onPress={() => handleCardPress(card)}
             activeOpacity={0.7}
           >
-            <View style={[styles.cardIconContainer, { backgroundColor: card.color + '20' }]}>
-              <Ionicons
-                name={card.icon as any}
-                size={24}
-                color={card.color}
-              />
+            <View
+              style={[
+                styles.cardIconContainer,
+                { backgroundColor: card.color + "20" },
+              ]}
+            >
+              <Ionicons name={card.icon as any} size={24} color={card.color} />
             </View>
             <View style={styles.cardContent}>
               <Text style={styles.cardTitle}>{card.title}</Text>
               <Text style={styles.cardDescription}>{card.description}</Text>
             </View>
+
+            {/* ✅ Badge only on Client card */}
+            {card.id === 1 && badgeCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{badgeCount}</Text>
+              </View>
+            )}
+
             <Ionicons name="chevron-forward" size={20} color="#bdc3c7" />
           </TouchableOpacity>
         ))}
@@ -178,5 +289,44 @@ const styles = StyleSheet.create({
   cardDescription: {
     fontSize: 13,
     color: "#7f8c8d",
+  },
+  // ✅ new styles
+  toast: {
+    position: "absolute",
+    top: 50,
+    left: 20,
+    right: 20,
+    backgroundColor: "#22c55e",
+    borderRadius: 12,
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    zIndex: 999,
+    elevation: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  toastText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 13,
+    flex: 1,
+  },
+  badge: {
+    backgroundColor: "#ef4444",
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 5,
+  },
+  badgeText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "700",
   },
 });
