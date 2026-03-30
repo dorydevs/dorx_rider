@@ -1,37 +1,31 @@
 import { useAppDispatch } from "@/store/hooks";
 import { setUser } from "@/store/slices/userSlice";
 import { getStoredUser } from "@/utils/auth";
-import firebase from "@react-native-firebase/app"; // 👈 add this
 import { useRouter } from "expo-router";
 import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
+import "../firebase"; // 👈 add this as line 1
 
 export default function IndexPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
 
   useEffect(() => {
-    console.log("Firebase apps:", firebase.apps.length);
-    console.log("Firebase name:", firebase.app().name);
-
     const redirectUser = async () => {
-      // Check if user is already logged in
       const user = await getStoredUser();
 
       if (!user) {
-        // No user found, redirect to login
         router.replace("/login");
         return;
       }
 
-      // Load user into Redux store
       dispatch(setUser(user));
-
-      // Redirect to home
       router.replace("/tabs");
     };
 
-    redirectUser();
+    // small delay to ensure Root Layout is mounted
+    const timeout = setTimeout(redirectUser, 100);
+    return () => clearTimeout(timeout);
   }, [dispatch, router]);
 
   return (
