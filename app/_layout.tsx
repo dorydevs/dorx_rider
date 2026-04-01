@@ -2,8 +2,9 @@ import { store } from "@/store";
 import { useAppSelector } from "@/store/hooks";
 import socket from "@/utils/socket";
 import { Ionicons } from "@expo/vector-icons";
+import notifee, { AndroidImportance } from "@notifee/react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import {
+import messaging, {
   getMessaging,
   onMessage,
   onNotificationOpenedApp,
@@ -14,6 +15,33 @@ import { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Provider } from "react-redux";
 import "../firebase";
+
+messaging().setBackgroundMessageHandler(async (remoteMessage) => {
+  console.log(">>> FCM background message received!", remoteMessage);
+});
+
+async function showNotification(title: string, body: string) {
+  const channelId = await notifee.createChannel({
+    id: "orders",
+    name: "Order Notifications",
+    importance: AndroidImportance.HIGH,
+    sound: "default",
+  });
+
+  await notifee.displayNotification({
+    title,
+    body,
+    android: {
+      channelId,
+      sound: "default",
+      importance: AndroidImportance.HIGH,
+      pressAction: { id: "default" },
+    },
+    ios: {
+      sound: "default",
+    },
+  });
+}
 
 function SocketManager() {
   const [userData, setUserData] = useState<any>(null);
@@ -44,7 +72,15 @@ function SocketManager() {
 
     const unsubscribeForeground = onMessage(m, async (remoteMessage) => {
       console.log(">>> FCM received in foreground!", remoteMessage);
-      setToastMessage(remoteMessage.notification?.body ?? "New notification");
+
+      const title = remoteMessage.notification?.title ?? "New Notification";
+      const body = remoteMessage.notification?.body ?? "";
+
+      //show heads-up banner + sound via notifee
+      await showNotification(title, body);
+
+      //Also show in-app toast
+      setToastMessage(body);
       setToastVisible(true);
       setTimeout(() => setToastVisible(false), 3000);
     });
@@ -75,15 +111,17 @@ function SocketManager() {
     }
     socket.on("new_parcel", (parcel) => {
       console.log(">>> new_parcel received!", parcel);
-      setToastMessage(
-        `New pickup: ${parcel.senderBarangay} - ${parcel.orderNumber}`,
-      );
-      setToastVisible(true);
-      setTimeout(() => setToastVisible(false), 3000);
     });
+
+    const handleNewParcel = (parcel: any) => {
+      console.log(">>> new_parcel received!", parcel);
+    };
+
+    socket.on("new_parcel", handleNewParcel);
+
     return () => {
       socket.off("connect");
-      socket.off("new_parcel");
+      socket.off("new_parcel", handleNewParcel);
     };
   }, [userData]);
 

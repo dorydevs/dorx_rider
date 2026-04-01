@@ -112,48 +112,17 @@ export default function BookingsScreen() {
       setBadgeCount((prev) => prev + 1);
     });
 
+    const handleNewParcel = (parcel: any) => {
+      setBadgeCount((prev) => prev + 1);
+    };
+
+    socket.on("new_parcel", handleNewParcel);
+
     return () => {
       socket.off("connect");
-      socket.off("new_parcel");
+      socket.off("new_parcel", handleNewParcel);
     };
   }, [userData]);
-
-  // badge count  with pop-up message
-  // useEffect(() => {
-  //   if (!userData) return;
-
-  //   const riderId = userData.id;
-  //   console.log(">>> connecting socket with riderId:", riderId);
-
-  //   if (!socket.connected) {
-  //     socket.connect();
-  //   }
-
-  //   socket.on("connect", () => {
-  //     console.log(">>> socket connected!", socket.id);
-  //     socket.emit("join_groupArea_room", { groupAreaId: riderId });
-  //   });
-
-  //   // rejoin room if already connected
-  //   if (socket.connected) {
-  //     socket.emit("join_groupArea_room", { groupAreaId: riderId });
-  //   }
-
-  //   socket.on("new_parcel", (parcel) => {
-  //     console.log(">>> new_parcel received!", parcel);
-  //     setToastMessage(
-  //       `New pickup: ${parcel.senderBarangay} - ${parcel.orderNumber}`,
-  //     );
-  //     setToastVisible(true);
-  //     setTimeout(() => setToastVisible(false), 3000);
-  //     setBadgeCount((prev) => prev + 1);
-  //   });
-
-  //   return () => {
-  //     socket.off("connect");
-  //     socket.off("new_parcel");
-  //   };
-  // }, [userData]);
 
   const handleCardPress = (card: (typeof cards)[number]) => {
     if (card.id === 1) setBadgeCount(0);
@@ -162,13 +131,13 @@ export default function BookingsScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Toast Notification */}
+      {/* Toast Notification
       {toastVisible && (
         <View style={styles.toast}>
           <Ionicons name="notifications" size={18} color="#fff" />
           <Text style={styles.toastText}>{toastMessage}</Text>
         </View>
-      )}
+      )} */}
 
       <View style={styles.headerSection}>
         <View style={styles.headerContent}>
@@ -205,7 +174,6 @@ export default function BookingsScreen() {
               <Text style={styles.cardDescription}>{card.description}</Text>
             </View>
 
-            {/* ✅ Badge only on Client card */}
             {card.id === 1 && badgeCount > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>{badgeCount}</Text>

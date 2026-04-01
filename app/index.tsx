@@ -4,7 +4,7 @@ import { getStoredUser } from "@/utils/auth";
 import { useRouter } from "expo-router";
 import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
-import "../firebase"; // 👈 add this as line 1
+import "../firebase";
 
 export default function IndexPage() {
   const router = useRouter();
