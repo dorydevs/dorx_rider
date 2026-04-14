@@ -1,13 +1,21 @@
+"../firebase";
 import { useAppDispatch } from "@/store/hooks";
 import { setUser } from "@/store/slices/userSlice";
 import axiosInstance from "@/utils/axiosInstance";
 import { yupResolver } from "@hookform/resolvers/yup";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  AuthorizationStatus,
+  getMessaging,
+  getToken,
+  requestPermission,
+} from "@react-native-firebase/messaging";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
   KeyboardAvoidingView,
+  PermissionsAndroid,
   Platform,
   ScrollView,
   StyleSheet,
@@ -57,37 +65,64 @@ export default function LoginScreen() {
   const onSubmit = async (data: LoginFormInputs) => {
     setError(null);
     setLoading(true);
-    
+
     try {
       const response = await axiosInstance().post("/api/rider/login", {
         password: data.password,
         userName: data.username,
       });
-      
+
       const userData = response.data;
 
-      // Save to AsyncStorage
+      // Save to AsyncStorage and Redux
       await AsyncStorage.setItem("user", JSON.stringify(userData));
-
-      // Save to Redux store
       dispatch(setUser(userData));
 
-      // Redirect to home
+      // Request notification permission (Android 13+)
+      if (Platform.OS === "android" && Platform.Version >= 33) {
+        console.log(">>> Requesting Android notification permission...");
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+        );
+        console.log(">>> Android notification permission:", granted);
+      }
+
+      // Request FCM permission and get token
+      console.log(">>> Requesting notification permission...");
+      const m = getMessaging();
+      const authStatus = await requestPermission(m);
+      const enabled =
+        authStatus === AuthorizationStatus.AUTHORIZED ||
+        authStatus === AuthorizationStatus.PROVISIONAL;
+
+      if (!enabled) {
+        console.log(">>> Notification permission denied, skipping FCM token");
+      } else {
+        console.log(">>> Notification permission granted!");
+        const fcmToken = await getToken(m);
+        console.log(">>> FCM token:", fcmToken);
+        await axiosInstance(userData.token).put("/api/rider/fcm-token", {
+          fcmToken,
+        });
+        console.log(">>> FCM token saved to backend!");
+      }
+
       setTimeout(() => {
         router.replace("/tabs");
       }, 100);
+
       setLoading(false);
     } catch (err: any) {
       console.error("Login error:", err);
       setLoading(false);
       setError(
-        "Something went wrong please double check your username and password"
+        "Something went wrong please double check your username and password",
       );
     }
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+    <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -98,81 +133,87 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-        <View style={styles.content}>
-          <Text style={styles.title}>DORY EXPRESS RIDERS</Text>
-          <Text style={styles.subtitle}>Sign in to your account</Text>
+          <View style={styles.content}>
+            <Text style={styles.title}>DORY EXPRESS RIDERS</Text>
+            <Text style={styles.subtitle}>Sign in to your account</Text>
 
-          <View style={styles.form}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Username</Text>
-              <Controller
-                control={control}
-                name="username"
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <TextInput
-                    style={[
-                      styles.input,
-                      errors.username && styles.inputError,
-                    ]}
-                    placeholder="Enter your username"
-                    placeholderTextColor="#6b7280"
-                    value={value}
-                    onChangeText={onChange}
-                    onBlur={onBlur}
-                    keyboardType="default"
-                    autoCapitalize="none"
-                    editable={!loading}
-                  />
+            <View style={styles.form}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Username</Text>
+                <Controller
+                  control={control}
+                  name="username"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <TextInput
+                      style={[
+                        styles.input,
+                        errors.username && styles.inputError,
+                      ]}
+                      placeholder="Enter your username"
+                      placeholderTextColor="#6b7280"
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      keyboardType="default"
+                      autoCapitalize="none"
+                      editable={!loading}
+                    />
+                  )}
+                />
+                {errors.username && (
+                  <Text style={styles.fieldError}>
+                    {errors.username.message}
+                  </Text>
                 )}
-              />
-              {errors.username && (
-                <Text style={styles.fieldError}>{errors.username.message}</Text>
-              )}
-            </View>
+              </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Password</Text>
-              <Controller
-                control={control}
-                name="password"
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <TextInput
-                    style={[
-                      styles.input,
-                      errors.password && styles.inputError,
-                    ]}
-                    placeholder="Enter your password"
-                    placeholderTextColor="#6b7280"
-                    value={value}
-                    onChangeText={onChange}
-                    onBlur={onBlur}
-                    secureTextEntry
-                    editable={!loading}
-                  />
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Password</Text>
+                <Controller
+                  control={control}
+                  name="password"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <TextInput
+                      style={[
+                        styles.input,
+                        errors.password && styles.inputError,
+                      ]}
+                      placeholder="Enter your password"
+                      placeholderTextColor="#6b7280"
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      secureTextEntry
+                      editable={!loading}
+                    />
+                  )}
+                />
+                {errors.password && (
+                  <Text style={styles.fieldError}>
+                    {errors.password.message}
+                  </Text>
                 )}
-              />
-              {errors.password && (
-                <Text style={styles.fieldError}>{errors.password.message}</Text>
+              </View>
+              {error !== null && (
+                <Text
+                  style={{ color: "tomato", padding: 10, textAlign: "center" }}
+                >
+                  {error}
+                </Text>
               )}
+              <TouchableOpacity
+                style={styles.button}
+                onPress={handleSubmit(onSubmit)}
+                disabled={loading}
+              >
+                <Text style={styles.buttonText}>
+                  {loading ? "Signing in..." : "Sign In"}
+                </Text>
+              </TouchableOpacity>
             </View>
-            {error !== null && (
-              <Text style={{ color: "tomato", padding: 10, textAlign: "center" }}>
-                {error}
-              </Text>
-            )}
-            <TouchableOpacity
-              style={styles.button}
-              onPress={handleSubmit(onSubmit)}
-              disabled={loading}
-            >
-              <Text style={styles.buttonText}>
-                {loading ? "Signing in..." : "Sign In"}
-              </Text>
-            </TouchableOpacity>
           </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

@@ -4,6 +4,7 @@ import { getStoredUser } from "@/utils/auth";
 import { useRouter } from "expo-router";
 import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
+import "../firebase";
 
 export default function IndexPage() {
   const router = useRouter();
@@ -11,23 +12,20 @@ export default function IndexPage() {
 
   useEffect(() => {
     const redirectUser = async () => {
-      // Check if user is already logged in
       const user = await getStoredUser();
 
       if (!user) {
-        // No user found, redirect to login
         router.replace("/login");
         return;
       }
 
-      // Load user into Redux store
       dispatch(setUser(user));
-
-      // Redirect to home
       router.replace("/tabs");
     };
 
-    redirectUser();
+    // small delay to ensure Root Layout is mounted
+    const timeout = setTimeout(redirectUser, 100);
+    return () => clearTimeout(timeout);
   }, [dispatch, router]);
 
   return (
