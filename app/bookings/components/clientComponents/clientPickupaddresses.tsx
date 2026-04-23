@@ -150,11 +150,11 @@ export default function ClientScreen() {
             </Text>
           </View>
 
-          <View style={{ padding: 20 }}>
+          {/* <View style={{ padding: 20 }}>
             <Text style={{ fontSize: 30, color: "white", marginBottom: -15 }}>
               {client.total}
             </Text>
-          </View>
+          </View> */}
         </View>
       </View>
 
