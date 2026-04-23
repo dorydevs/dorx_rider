@@ -121,6 +121,7 @@ export default function RTSIncomingScreen() {
             recipientDetailId: validationResponse.data.recipientDetailId,
             orderTransactionId: validationResponse.data.orderTransactionId,
             orderNumber: data.data,
+            senderName: validationResponse.data.senderName,
           };
 
           await axiosInstance(userData.token).put(
@@ -140,7 +141,7 @@ export default function RTSIncomingScreen() {
           playSuccess();
           setScannedData((prev) => [...prev, data.data]);
           setScanResultMessage(
-            `✓ Item successfully returned to ${senderName}\nTotal: ${totalScannedCount + 1}`,
+            `✓ Item successfully returned to ${validationResponse.data.senderName}\nTotal: ${totalScannedCount + 1}`,
           );
           setAlertColor("green");
           setLoadingScan(false);

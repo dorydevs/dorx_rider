@@ -29,7 +29,10 @@ export default function clientScheduledToPickUp() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [ScheduledData, setScheduledData] = useState<ClientData[]>([]);
-  const [acceptingId, setAcceptingId] = useState<number | null>(null); // ✅
+  const [acceptingId, setAcceptingId] = useState<number | null>(null);
+  const [alreadyAcceptedIds, setAlreadyAcceptedIds] = useState<Set<number>>(
+    new Set(),
+  );
   const [userData, setUserData] = useState<any>(null);
   const user = useAppSelector((state: any) => state.user.user);
   const client: ClientData = clientData
@@ -84,7 +87,7 @@ export default function clientScheduledToPickUp() {
             waybillNumber: d[0].waybillNumber,
             orderNumber: d[0].orderNumber,
             orderIds: d.map((o: any) => o.id ?? o.orderDetailId),
-            acceptedBy: acceptedByRider, // ✅ use this instead of d[0].acceptedBy
+            acceptedBy: acceptedByRider,
           };
         });
 
@@ -106,9 +109,22 @@ export default function clientScheduledToPickUp() {
   // socket listener
   useEffect(() => {
     if (!userData) return;
-    const handleParcelAccepted = () => handleScheduledToPickUp();
-    socket.on("parcel_accepted", handleParcelAccepted);
-    return () => socket.off("parcel_accepted", handleParcelAccepted);
+
+    socket.on("parcel_accepted", (data) => {
+      setScheduledData((prev) =>
+        prev.map((item) => {
+          const isAffected = item.orderIds.some((id: number) =>
+            data.orderIds.includes(id),
+          );
+          if (isAffected) {
+            return { ...item, acceptedBy: data.acceptedBy };
+          }
+          return item;
+        }),
+      );
+    });
+
+    return () => socket.off("parcel_accepted");
   }, [userData]);
 
   const handleAccept = async (item: ClientData) => {
@@ -125,13 +141,17 @@ export default function clientScheduledToPickUp() {
         },
       );
       if (res.status === 200) {
-        handleScheduledToPickUp();
+        if (res.data?.isAccepted === true) {
+          setAlreadyAcceptedIds((prev) => new Set(prev).add(item.orderIds[0]));
+        } else {
+          handleScheduledToPickUp();
+        }
       }
     } catch (err: any) {
       console.log(">>> handleAccept ERROR status:", err?.response?.status);
       console.log(">>> handleAccept ERROR data:", err?.response?.data);
       if (err?.response?.status === 409) {
-        handleScheduledToPickUp();
+        setAlreadyAcceptedIds((prev) => new Set(prev).add(item.orderIds[0]));
       }
     } finally {
       setAcceptingId(null);
@@ -164,26 +184,27 @@ export default function clientScheduledToPickUp() {
       });
     }
   };
+
   const renderItem = ({ item }: { item: ClientData }) => {
     const isAccepting = acceptingId === item.orderIds?.[0];
     const isAcceptedByMe = Number(item.acceptedBy) === Number(userData?.id);
     const isTaken =
       !!item.acceptedBy && Number(item.acceptedBy) !== Number(userData?.id);
+    const isAlreadyAccepted = alreadyAcceptedIds.has(item.orderIds?.[0]);
+    //arrow only works if YOU accepted it
+    const canNavigate = isAcceptedByMe;
 
     return (
       <View style={[styles.card, { width: Math.min(760, width - 40) }]}>
-        {/* Top — tappable to go to scanner */}
+        {/* Top — tappable to go to scanner only if accepted by me */}
         <TouchableOpacity
-          style={[
-            styles.cardTop,
-            isTaken && { opacity: 0.5 }, //dim when taken
-          ]}
+          style={[styles.cardTop, !canNavigate && { opacity: 0.5 }]}
           onPress={() => handlePress(item)}
-          activeOpacity={isTaken ? 1 : 0.75}
-          disabled={isTaken} //disabled when taken
+          activeOpacity={canNavigate ? 0.75 : 1}
+          disabled={!canNavigate}
         >
           <View style={styles.cardInfo}>
-            <Text style={styles.orderNumber}>{item.orderNumber}</Text>
+            {/* <Text style={styles.orderNumber}>{item.orderNumber}</Text> */}
             <View style={styles.row}>
               <Feather name="calendar" size={13} color="#7f8c8d" />
               <Text style={styles.dateText}>
@@ -200,7 +221,11 @@ export default function clientScheduledToPickUp() {
               Total Items: {item.totalItems}
             </Text>
           </View>
-          <FontAwesome name="chevron-right" size={16} color="#bdc3c7" />
+          <FontAwesome
+            name="chevron-right"
+            size={16}
+            color={canNavigate ? "#22c55e" : "#bdc3c7"}
+          />
         </TouchableOpacity>
 
         {/* Divider */}
@@ -215,11 +240,11 @@ export default function clientScheduledToPickUp() {
                 You accepted this pickup
               </Text>
             </View>
-          ) : isTaken ? (
+          ) : isTaken || isAlreadyAccepted ? (
             <View style={[styles.acceptButton, styles.acceptButtonTaken]}>
               <FontAwesome name="lock" size={14} color="#94a3b8" />
               <Text style={styles.acceptButtonTakenText}>
-                Accepted by another rider
+                Booking is already accepted
               </Text>
             </View>
           ) : (
@@ -274,11 +299,11 @@ export default function clientScheduledToPickUp() {
               {client.address}
             </Text>
           </View>
-          <View style={{ padding: 20 }}>
+          {/* <View style={{ padding: 20 }}>
             <Text style={{ fontSize: 30, color: "white", marginBottom: -15 }}>
               {client.total}
             </Text>
-          </View>
+          </View> */}
         </View>
       </View>
 

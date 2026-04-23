@@ -16,10 +16,6 @@ import { StyleSheet, Text, View } from "react-native";
 import { Provider } from "react-redux";
 import "../firebase";
 
-messaging().setBackgroundMessageHandler(async (remoteMessage) => {
-  console.log(">>> FCM background message received!", remoteMessage);
-});
-
 async function showNotification(title: string, body: string) {
   const channelId = await notifee.createChannel({
     id: "orders",
@@ -42,6 +38,13 @@ async function showNotification(title: string, body: string) {
     },
   });
 }
+
+messaging().setBackgroundMessageHandler(async (remoteMessage) => {
+  console.log(">>> FCM background message received!", remoteMessage);
+  const title = remoteMessage.data?.title ?? "New Notification";
+  const body = remoteMessage.data?.body ?? "";
+  await showNotification(title, body);
+});
 
 function SocketManager() {
   const [userData, setUserData] = useState<any>(null);
@@ -73,13 +76,13 @@ function SocketManager() {
     const unsubscribeForeground = onMessage(m, async (remoteMessage) => {
       console.log(">>> FCM received in foreground!", remoteMessage);
 
-      const title = remoteMessage.notification?.title ?? "New Notification";
-      const body = remoteMessage.notification?.body ?? "";
+      const title = remoteMessage.data?.title ?? "New Notification";
+      const body = remoteMessage.data?.body ?? "";
 
-      //show heads-up banner + sound via notifee
+      // show heads-up banner + sound via notifee
       await showNotification(title, body);
 
-      //Also show in-app toast
+      // also show in-app toast
       setToastMessage(body);
       setToastVisible(true);
       setTimeout(() => setToastVisible(false), 3000);
@@ -109,9 +112,6 @@ function SocketManager() {
     if (socket.connected) {
       socket.emit("join_groupArea_room", { groupAreaId: riderId });
     }
-    socket.on("new_parcel", (parcel) => {
-      console.log(">>> new_parcel received!", parcel);
-    });
 
     const handleNewParcel = (parcel: any) => {
       console.log(">>> new_parcel received!", parcel);

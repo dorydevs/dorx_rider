@@ -76,14 +76,13 @@ export default function CustomersScreen() {
   const [previewReady, setPreviewReady] = useState(false);
   const [orderNumber, setOrderNumber] = useState<any>("");
   const [permission, requestPermission] = useCameraPermissions();
-  // const attemptReached = attempts === "reached" ? true : false;
   const [facing, setFacing] = useState<CameraType>("back");
   const cameraRef = useRef<CameraView | null>(null);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [photoToUpload, setPhotoToUpload] = useState<string | null>(null);
   const [imageCapturingloading, setImageCapturingloading] =
     useState<boolean>(false);
-  const [previewKey, setPreviewKey] = useState(0);
+  const [imageLoading, setImageLoading] = useState<boolean>(false);
   const [showScanner, setShowScanner] = useState(true);
   const [coords, setCoords] = useState<{
     latitude: number;
@@ -98,41 +97,39 @@ export default function CustomersScreen() {
 
   const bottomDrawerForReturnref = useRef<any>(null);
 
-  // Intercept Android back button and always return to Home
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {
         router.back();
-        return true; // prevent default stack navigation
+        return true;
       };
-
       const subscription = BackHandler.addEventListener(
         "hardwareBackPress",
         onBackPress,
       );
-
       return () => subscription.remove();
     }, [router]),
   );
 
   const openCameraDrawer = () => {
-    setShowScanner(false); // Unmount scanner first
+    setShowScanner(false);
     setTimeout(() => {
       setIsPODActive(true);
       cameraButtomDrawer.current?.open();
-    }, 300); // 300ms delay is usually enough for the OS to release hardware
+    }, 300);
   };
 
   const closeCameraDrawer = () => {
     setIsPODActive(false);
     cameraButtomDrawer.current?.close();
     setTimeout(() => {
-      setShowScanner(true); // Re-mount scanner after drawer closes
+      setShowScanner(true);
     }, 300);
   };
 
   useEffect(() => {
     const handleAttempChecker = async () => {
+      if (!userData) return;
       setAttemptsLoading(true);
       const { data } = await axiosInstance(userData.token).get(
         `/api/rider/delivery-attempts/${waybillDetails.orderTransactionId}`,
@@ -150,10 +147,10 @@ export default function CustomersScreen() {
       }
       setAttemptsLoading(false);
     };
-    if (waybillDetails.length !== 0) {
+    if (waybillDetails.orderTransactionId && userData) {
       handleAttempChecker();
     }
-  }, [waybillDetails]);
+  }, [waybillDetails, userData]);
 
   const onSave = async () => {
     if (reason !== "") {
@@ -170,7 +167,6 @@ export default function CustomersScreen() {
         await axiosInstance(userData.token).post(
           `/api/rider/delivery-attempts`,
           {
-            // attemptDate: moment().toISOString(),
             attempt: attempts,
             orderTransactionId: waybillDetails.orderTransactionId,
             riderId: userData.id,
@@ -189,7 +185,6 @@ export default function CustomersScreen() {
               waybillStatus: "For Return",
             },
           );
-
           bottomDrawerRef.current?.close();
           bottomDrawerForReturnref.current?.close();
           cameraButtomDrawer.current?.close();
@@ -207,7 +202,6 @@ export default function CustomersScreen() {
         // bottomDrawerForReturnref.current?.close();
         setShowReturn(false);
         setLoading(false);
-        // close();
         setReason("");
       } catch (error: any) {
         setReason("");
@@ -241,7 +235,6 @@ export default function CustomersScreen() {
         console.log("SUCCESS");
       }
     };
-
     loadUserData();
   }, [user]);
 
@@ -330,15 +323,10 @@ export default function CustomersScreen() {
 
       const uniqueUri = FileSystem?.cacheDirectory + `pod-${Date.now()}.jpg`;
 
-      await FileSystem.copyAsync({
-        from: tmpUri,
-        to: uniqueUri,
-      });
+      await FileSystem.copyAsync({ from: tmpUri, to: uniqueUri });
 
       const finalImageUri = uniqueUri;
-
       const formData = new FormData();
-
       const filename = finalImageUri.split("/").pop();
       const match = /\.(\w+)$/.exec(filename || "");
       const type = match ? `image/${match[1]}` : `image`;
@@ -355,12 +343,9 @@ export default function CustomersScreen() {
       const { data: responseData } = await axiosInstance(userData.token).put(
         `/api/orderTransactions/updateWaybillStatus`,
         formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        },
+        { headers: { "Content-Type": "multipart/form-data" } },
       );
+
       if (responseData?.message === "Successfully Updated") {
         setSuccess(true);
         if (status === "Delivered") {
@@ -380,17 +365,20 @@ export default function CustomersScreen() {
           setShowReturn(false);
           console.log(">>> logScanData:", logScanData);
           setSuccessMessage("Successfully Delivered");
-        } else if (status === "For Return")
+        } else if (status === "For Return") {
           setSuccessMessage("Successfully Updated - For Return");
+        }
       }
       setPreviewReady(false);
       setPreviewKey((prev) => prev + 1);
       setPhotoUri(null);
+      setImageLoading(false);
       setTimeout(() => {
         setShowScanner(true);
       }, 300);
     } catch (error) {
       setPhotoUri(null);
+      setImageLoading(false);
       console.log("onUpdateWaybillStatus ERROR : >>> ", error);
     }
 
@@ -411,8 +399,8 @@ export default function CustomersScreen() {
 
   const takePhoto = async () => {
     if (!cameraRef.current) return;
-
     setImageCapturingloading(true);
+    setImageLoading(true);
 
     try {
       const photo = await cameraRef.current.takePictureAsync({
@@ -436,20 +424,14 @@ export default function CustomersScreen() {
         const posPromise = Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced,
         });
-
         loc = await Promise.race([posPromise, timeout]);
       }
       if (!loc?.coords) throw new Error("Failed to get coords");
       const { latitude, longitude } = loc.coords;
-      setCoords({
-        latitude: latitude,
-        longitude: longitude,
-      });
-
+      setCoords({ latitude, longitude });
       setPhotoUri(photo.uri);
-      setImageCapturingloading(false);
     } catch (err) {
-      setImageCapturingloading(false);
+      setImageLoading(false);
       console.log("Error capturing photo:", err);
     } finally {
       setImageCapturingloading(false);
@@ -474,6 +456,7 @@ export default function CustomersScreen() {
   const cancelPhoto = () => {
     setPhotoUri(null);
     setCoords(null);
+    setImageLoading(false);
   };
 
   const submitPhoto = () => {
@@ -509,39 +492,29 @@ export default function CustomersScreen() {
             scanned={scanned}
           />
         )}
-      </View>
 
-      {/* SCAN COUNT */}
-      <View style={styles.scanCountContainer}>
-        <View style={styles.scanCountCard}>
-          <Text style={styles.scanCountNumber}>{scanCount}</Text>
-          <Text style={styles.scanCountLabel}>
-            {scanCount === 1 ? "Item Scanned" : "Items Scanned"}
+        {/* SCANNING STATUS — pinned to bottom of scanner */}
+        <View style={styles.statusContainer}>
+          <View
+            style={[
+              styles.statusIndicator,
+              {
+                backgroundColor: loadingScan
+                  ? "#f59e0b"
+                  : scanned
+                    ? "#ef4444"
+                    : "#22c55e",
+              },
+            ]}
+          />
+          <Text style={styles.statusText}>
+            {loadingScan
+              ? "Processing..."
+              : scanned
+                ? "Camera Locked"
+                : "Ready to Scan"}
           </Text>
         </View>
-      </View>
-
-      {/* SCANNING STATUS */}
-      <View style={styles.statusContainer}>
-        <View
-          style={[
-            styles.statusIndicator,
-            {
-              backgroundColor: loadingScan
-                ? "#f59e0b"
-                : scanned
-                  ? "#ef4444"
-                  : "#22c55e",
-            },
-          ]}
-        />
-        <Text style={styles.statusText}>
-          {loadingScan
-            ? "Processing..."
-            : scanned
-              ? "Camera Locked"
-              : "Ready to Scan"}
-        </Text>
       </View>
 
       {/* SCAN RESULT ALERT */}
@@ -612,29 +585,23 @@ export default function CustomersScreen() {
               </View>
               <Text style={styles.boldText}>{waybillDetails?.itemName}</Text>
               <Text>{waybillDetails?.orderNumber}</Text>
-
               <View style={styles.divider} />
-
               <Text>
                 <Text style={{ fontWeight: "bold" }}>COD Value:</Text>{" "}
                 {waybillDetails?.codValue}
               </Text>
-
               <Text>
                 <Text style={{ fontWeight: "bold" }}>Item Weight:</Text>{" "}
                 {waybillDetails?.itemWeight}{" "}
               </Text>
-
               <Text>
                 <Text style={{ fontWeight: "bold" }}> Number of Item: </Text>{" "}
                 {waybillDetails?.numberOfItem}
               </Text>
-
               <Text>
                 <Text style={{ fontWeight: "bold" }}> Recipient: </Text>
                 {`${waybillDetails?.receiverFirstName} ${waybillDetails?.receiverMiddleName} ${waybillDetails?.receiverLastName}`}
               </Text>
-
               <Text>
                 {" "}
                 <Text style={{ fontWeight: "bold" }}>Phone:</Text>{" "}
@@ -663,7 +630,6 @@ export default function CustomersScreen() {
                     >
                       <Text style={styles.buttonText}>Mark As Delivered</Text>
                     </TouchableOpacity>
-
                     <TouchableOpacity
                       style={[styles.button, styles.warningButton]}
                       onPress={() => {
@@ -675,26 +641,16 @@ export default function CustomersScreen() {
                     </TouchableOpacity>
                   </>
                 ) : (
-                  <>
-                    <Text
-                      style={{
-                        textAlign: "center",
-                        fontSize: 15,
-                        color: "tomato",
-                        padding: 10,
-                      }}
-                    >
-                      This item is for return to seller {`(RTS)`}
-                    </Text>
-                    {/* OPTIONAL FEATURE  */}
-                    {/*This is created due to process or logic ing rts-return */}
-                    {/* <TouchableOpacity
-                      style={[styles.button, styles.successButton]}
-                      onPress={() => onUpdateWaybillStatus("For Return")}
-                    >
-                      <Text style={styles.buttonText}>Return Item</Text>
-                    </TouchableOpacity> */}
-                  </>
+                  <Text
+                    style={{
+                      textAlign: "center",
+                      fontSize: 15,
+                      color: "tomato",
+                      padding: 10,
+                    }}
+                  >
+                    This item is for return to seller {`(RTS)`}
+                  </Text>
                 )}
               </>
             )}
@@ -728,7 +684,7 @@ export default function CustomersScreen() {
               style={styles.camera}
               facing="back"
             />
-          ) : (
+          ) : photoUri ? (
             <ViewShot
               key={previewKey}
               ref={viewShotRef}
@@ -736,64 +692,77 @@ export default function CustomersScreen() {
             >
               <View collapsable={false}>
                 <Image
-                  onLoadEnd={() => setPreviewReady(true)}
+                  onLoadStart={() => setImageLoading(true)}
+                  onLoadEnd={() => {
+                    setImageLoading(false);
+                    setPreviewReady(true);
+                  }}
                   source={{ uri: photoUri || "" }}
                   style={styles.camera}
                 />
 
-                {imageCapturingloading ? (
+                {imageLoading && (
+                  <View style={styles.imageLoadingOverlay}>
+                    <ActivityIndicator size="large" color="#fff" />
+                    <Text style={styles.imageLoadingText}>
+                      Image Capturing...
+                    </Text>
+                  </View>
+                )}
+
+                {/* Coords only shown after image is fully loaded */}
+                {!imageLoading && imageCapturingloading && (
                   <View style={styles.coordContainer}>
                     <Text style={styles.coordText}>
                       Coordinates still processing...
                     </Text>
                   </View>
-                ) : (
-                  coords && (
-                    <View style={styles.coordContainer}>
-                      <View
-                        style={{
-                          height: 70,
-                          width: "30%",
-                          borderRadius: 20,
-                          overflow: "hidden",
-                        }}
-                      >
-                        <MapView
-                          style={{ flex: 1 }}
-                          collapsable={false}
-                          initialRegion={{
-                            latitude: coords.latitude,
-                            longitude: coords.longitude,
-                            latitudeDelta: 0.002,
-                            longitudeDelta: 0.002,
-                          }}
-                          scrollEnabled={false}
-                          zoomEnabled={false}
-                        >
-                          <Marker coordinate={coords} />
-                        </MapView>
-                      </View>
+                )}
 
-                      <View>
-                        <Text style={{ fontSize: 11, color: "white" }}>
-                          {moment().format("DD-MM-YYYY-hh:mm:ss-A")}
-                        </Text>
-                        <Text style={styles.coordText}>
-                          Lat: {coords.latitude.toFixed(6)}
-                        </Text>
-                        <Text style={styles.coordText}>
-                          Lng: {coords.longitude.toFixed(6)}
-                        </Text>
-                        <Text style={{ fontSize: 12, color: "white" }}>
-                          WBN : {waybillDetails.waybillNumber}
-                        </Text>
-                      </View>
+                {!imageLoading && !imageCapturingloading && coords && (
+                  <View style={styles.coordContainer}>
+                    <View
+                      style={{
+                        height: 70,
+                        width: "30%",
+                        borderRadius: 20,
+                        overflow: "hidden",
+                      }}
+                    >
+                      <MapView
+                        style={{ flex: 1 }}
+                        collapsable={false}
+                        initialRegion={{
+                          latitude: coords.latitude,
+                          longitude: coords.longitude,
+                          latitudeDelta: 0.002,
+                          longitudeDelta: 0.002,
+                        }}
+                        scrollEnabled={false}
+                        zoomEnabled={false}
+                      >
+                        <Marker coordinate={coords} />
+                      </MapView>
                     </View>
-                  )
+                    <View>
+                      <Text style={{ fontSize: 11, color: "white" }}>
+                        {moment().format("DD-MM-YYYY-hh:mm:ss-A")}
+                      </Text>
+                      <Text style={styles.coordText}>
+                        Lat: {coords.latitude.toFixed(6)}
+                      </Text>
+                      <Text style={styles.coordText}>
+                        Lng: {coords.longitude.toFixed(6)}
+                      </Text>
+                      <Text style={{ fontSize: 12, color: "white" }}>
+                        WBN : {waybillDetails.waybillNumber}
+                      </Text>
+                    </View>
+                  </View>
                 )}
               </View>
             </ViewShot>
-          )}
+          ) : null}
 
           {/* Action buttons */}
           <View style={{ flexDirection: "column", gap: 10, marginTop: 10 }}>
@@ -807,54 +776,36 @@ export default function CustomersScreen() {
               </TouchableOpacity>
             ) : (
               <>
-                <TouchableOpacity onPress={submitPhoto} disabled={loading}>
-                  <Button
-                    buttonColor="#22c55e"
-                    textColor="white"
-                    onPress={submitPhoto}
-                    mode="contained"
-                    loading={loading}
-                    disabled={loading}
-                  >
-                    Submit
-                  </Button>
-                  {/* <Text style={styles.buttonText}>Submit</Text> */}
-                </TouchableOpacity>
-                <TouchableOpacity
-                  // style={[styles.button, styles.cancelButton]}
-                  // onPress={cancelPhoto}
+                <Button
+                  buttonColor="#22c55e"
+                  textColor="white"
+                  onPress={submitPhoto}
+                  mode="contained"
+                  loading={loading}
+                  disabled={loading || imageLoading}
+                >
+                  Submit
+                </Button>
+                <Button
+                  buttonColor="#dc2626"
+                  textColor="white"
+                  onPress={cancelPhoto}
+                  mode="contained"
                   disabled={loading}
                 >
-                  <Button
-                    buttonColor="#dc2626"
-                    textColor="white"
-                    onPress={cancelPhoto}
-                    mode="contained"
-                    // loading={loading}
-                    // disabled={loading}
-                  >
-                    Cancel
-                  </Button>
-                </TouchableOpacity>
+                  Cancel
+                </Button>
               </>
             )}
-
-            <TouchableOpacity
-              // style={[styles.button, styles.closeButton]}
-
+            <Button
+              buttonColor="#9E9E9E"
+              textColor="white"
+              onPress={() => closeCameraDrawer()}
+              mode="contained"
               disabled={loading}
             >
-              <Button
-                buttonColor="#9E9E9E"
-                textColor="white"
-                onPress={() => closeCameraDrawer()}
-                mode="contained"
-                // loading={loading}
-                // disabled={loading}
-              >
-                Close
-              </Button>
-            </TouchableOpacity>
+              Close
+            </Button>
           </View>
         </View>
       </BottomDrawer>
@@ -865,7 +816,6 @@ export default function CustomersScreen() {
           contentContainerStyle={{ paddingBottom: 100 }}
         >
           <Text style={styles.label}>Reason for Return</Text>
-
           <TextInput
             style={styles.textArea}
             placeholder="Enter your reason here..."
@@ -935,58 +885,27 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: "hidden",
   },
-  // statusContainer: {
-  //   flexDirection: "row",
-  //   alignItems: "center",
-  //   justifyContent: "center",
-  //   marginTop: 12,
-  //   marginBottom: 4,
-  // },
-
-  scanCountCard: {
-    backgroundColor: "#fff",
-    paddingVertical: 10,
-    paddingHorizontal: 32,
-    borderRadius: 14,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#D1FAE5",
-    shadowColor: "#22c55e",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  scanCountNumber: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: "#22c55e",
-  },
-  scanCountLabel: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#64748B",
-    marginTop: 2,
-  },
   statusContainer: {
+    position: "absolute",
+    bottom: 16,
+    left: 16,
+    right: 16,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    alignSelf: "center",
     paddingVertical: 10,
     paddingHorizontal: 20,
-    marginTop: 10,
     borderRadius: 12,
-    backgroundColor: "#F0FDF4",
+    backgroundColor: "rgba(240, 253, 244, 0.92)",
   },
   statusIndicator: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
   statusText: { fontSize: 14, fontWeight: "600", color: "#15803D" },
   resultAlert: {
-    marginTop: 12,
-    marginHorizontal: 16,
-    padding: 16,
-    borderRadius: 14,
-    borderWidth: 2,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
     alignItems: "center",
   },
   resultText: { fontSize: 15, fontWeight: "600", textAlign: "center" },
@@ -1000,6 +919,24 @@ const styles = StyleSheet.create({
     height: 400,
     borderRadius: 10,
     backgroundColor: "#000",
+  },
+  // ✅ new overlay style
+  imageLoadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.65)",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 10,
+    gap: 12,
+  },
+  imageLoadingText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 16,
   },
   coordContainer: {
     position: "absolute",
@@ -1035,20 +972,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 20,
     opacity: 0.8,
-  },
-  resultAlert: {
-    marginTop: 10,
-    marginHorizontal: 12,
-    padding: 10,
-    borderRadius: 8,
-    borderWidth: 2,
-    alignItems: "center",
-    gap: 8,
-    marginHorizontal: 20,
-    marginBottom: 12,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
   },
   errorBg: { backgroundColor: "#fee", borderColor: "#fcc" },
   successBg: { backgroundColor: "#d4edda", borderColor: "#c3e6cb" },
@@ -1094,5 +1017,21 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 14,
     marginBottom: 16,
+  },
+  scanCountCard: {
+    backgroundColor: "#fff",
+    paddingVertical: 10,
+    paddingHorizontal: 32,
+    borderRadius: 14,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#D1FAE5",
+  },
+  scanCountNumber: { fontSize: 28, fontWeight: "800", color: "#22c55e" },
+  scanCountLabel: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#64748B",
+    marginTop: 2,
   },
 });
