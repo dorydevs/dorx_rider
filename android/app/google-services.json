@@ -1,0 +1,202 @@
+﻿{
+  "project_info": {
+    "project_number": "858615497570",
+    "project_id": "groceria-fcm",
+    "storage_bucket": "groceria-fcm.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:858615497570:android:3f5b2cbf68adb4030ce23b",
+        "android_client_info": {
+          "package_name": "com.doryexpress.dorxrider"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "858615497570-q9emt0mgvfsiurmma57vdtu3db750lvq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.doryexpress.dorxrider",
+            "certificate_hash": "7093b0619158766e686f2ca6e8f585f91ca7efd4"
+          }
+        },
+        {
+          "client_id": "858615497570-5pmgcmi3obq8sub98p7fn7toghitkqhr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDP14VwqMqAgpK5rf7sLqJr-4-rnLq0v9E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "858615497570-5pmgcmi3obq8sub98p7fn7toghitkqhr.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "858615497570-3sjk9mno45tku7loirn02i8fo2eat90d.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.groceria.gps"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:858615497570:android:a7112d19402499f50ce23b",
+        "android_client_info": {
+          "package_name": "com.groceria"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "858615497570-f7ltfltfa223ine3it1vu2oo12mp0pkv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.groceria",
+            "certificate_hash": "eb56ab8fb3ca269dae38293ae2d95a4973a77681"
+          }
+        },
+        {
+          "client_id": "858615497570-qq36cf3i69afrc5v9po6at6d9dhn696s.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.groceria",
+            "certificate_hash": "4efba121636a58caf0d10f91ded3e3354a7af280"
+          }
+        },
+        {
+          "client_id": "858615497570-rupj83c8uc6fub24jorl5l4golfk65in.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.groceria",
+            "certificate_hash": "65465f37ac0306e7b0498b392f0bb7336d589959"
+          }
+        },
+        {
+          "client_id": "858615497570-5pmgcmi3obq8sub98p7fn7toghitkqhr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDP14VwqMqAgpK5rf7sLqJr-4-rnLq0v9E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "858615497570-5pmgcmi3obq8sub98p7fn7toghitkqhr.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "858615497570-3sjk9mno45tku7loirn02i8fo2eat90d.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.groceria.gps"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:858615497570:android:1f5e4d671e4ab5230ce23b",
+        "android_client_info": {
+          "package_name": "com.groceria.gps"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "858615497570-t7l3891k6vp07n9dersjj9ok8uh7ajek.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.groceria.gps",
+            "certificate_hash": "45f92e6dc19f0f429a82a561edcde4b1d8b163f1"
+          }
+        },
+        {
+          "client_id": "858615497570-5pmgcmi3obq8sub98p7fn7toghitkqhr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDP14VwqMqAgpK5rf7sLqJr-4-rnLq0v9E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "858615497570-5pmgcmi3obq8sub98p7fn7toghitkqhr.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "858615497570-3sjk9mno45tku7loirn02i8fo2eat90d.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.groceria.gps"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:858615497570:android:990870064242ebfb0ce23b",
+        "android_client_info": {
+          "package_name": "com.groceria.operator"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "858615497570-9ekarnl2fcmln3f9l0agdua9vthn2m3c.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.groceria.operator",
+            "certificate_hash": "30c5f3d34b36eb95b35892b1cf66cbc069358105"
+          }
+        },
+        {
+          "client_id": "858615497570-5pmgcmi3obq8sub98p7fn7toghitkqhr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDP14VwqMqAgpK5rf7sLqJr-4-rnLq0v9E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "858615497570-5pmgcmi3obq8sub98p7fn7toghitkqhr.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "858615497570-3sjk9mno45tku7loirn02i8fo2eat90d.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.groceria.gps"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
