@@ -82,7 +82,8 @@ export default function CustomersScreen() {
   const [photoToUpload, setPhotoToUpload] = useState<string | null>(null);
   const [imageCapturingloading, setImageCapturingloading] =
     useState<boolean>(false);
-  const [imageLoading, setImageLoading] = useState<boolean>(false);
+  const [previewKey, setPreviewKey] = useState(0);
+  const [imageLoading, setImageLoading] = useState(false);
   const [showScanner, setShowScanner] = useState(true);
   const [coords, setCoords] = useState<{
     latitude: number;

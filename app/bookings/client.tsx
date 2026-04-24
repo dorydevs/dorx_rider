@@ -78,7 +78,7 @@ export default function ClientScreen() {
             console.log("NATAWAG 02");
 
             // Paki balik sa true
-            if (!hasDateDeliveredNotToday) {
+            if (hasDateDeliveredNotToday) {
               setRemittanceCheckerData(false);
             } else {
               const response = await axiosInstance(userData.token).get(
