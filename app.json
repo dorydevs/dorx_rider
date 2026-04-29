@@ -2,7 +2,7 @@
   "expo": {
     "name": "dorx-rider",
     "slug": "dorx-rider",
-    "version": "1.4.0",
+    "version": "1.3.0",
     "orientation": "portrait",
     "icon": "./assets/images/logo.png",
     "scheme": "dorxrider",
@@ -15,7 +15,7 @@
       }
     },
     "android": {
-      "googleServicesFile": "./android/app/google-services.json",
+      "googleServicesFile": "./android/app/google-service.json",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/logo.png",
