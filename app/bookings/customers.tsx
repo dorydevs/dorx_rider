@@ -13,6 +13,8 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import moment from "moment";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import deliveredSocket from "../../helpers/socketConnection";
+
 import {
   ActivityIndicator,
   BackHandler,
@@ -98,6 +100,13 @@ export default function CustomersScreen() {
 
   const bottomDrawerForReturnref = useRef<any>(null);
 
+  // Auto-connect deliveredSocket when screen is mounted or revisited
+  useEffect(() => {
+    if (!deliveredSocket.connected) {
+      deliveredSocket.connect();
+    }
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {
@@ -111,6 +120,26 @@ export default function CustomersScreen() {
       return () => subscription.remove();
     }, [router]),
   );
+
+  // Leave socket room when leaving screen
+  useEffect(() => {
+    return () => {
+      // Replace 'dorx123' with your dynamic room if needed
+      deliveredSocket.emit("app_leave_room", "dorx123");
+    };
+  }, []);
+
+  const sendUpdatedDeliveredData = () => {
+    console.log("Testing Socket Connection...");
+    if (!deliveredSocket.connected) {
+      deliveredSocket.connect();
+    }
+    deliveredSocket.emit("join_room", "dorx123");
+    deliveredSocket.emit("send_updated_data", {
+      roomId: "dorx123",
+      transactionType: "Delivered",
+    });
+  };
 
   const openCameraDrawer = () => {
     setShowScanner(false);
@@ -374,6 +403,7 @@ export default function CustomersScreen() {
       setPreviewKey((prev) => prev + 1);
       setPhotoUri(null);
       setImageLoading(false);
+      sendUpdatedDeliveredData();
       setTimeout(() => {
         setShowScanner(true);
       }, 300);
@@ -495,7 +525,15 @@ export default function CustomersScreen() {
         )}
 
         {/* SCANNING STATUS — pinned to bottom of scanner */}
+
         <View style={styles.statusContainer}>
+          <TouchableOpacity onPress={() => sendUpdatedDeliveredData()}>
+            <Text
+              style={{ textAlign: "center", marginBottom: 8, color: "gray" }}
+            >
+              Socket Test
+            </Text>
+          </TouchableOpacity>
           <View
             style={[
               styles.statusIndicator,

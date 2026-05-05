@@ -9,6 +9,7 @@ import moment from "moment";
 import { useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import deliveredSocket from "../../helpers/socketConnection";
 
 const ALERT_COLORS: Record<
   string,
@@ -21,6 +22,33 @@ const ALERT_COLORS: Record<
 };
 
 export default function RTSIncomingScreen() {
+  // Auto-connect deliveredSocket when screen is mounted or revisited
+  useEffect(() => {
+    if (!deliveredSocket.connected) {
+      deliveredSocket.connect();
+    }
+  }, []);
+
+  // Leave socket room when leaving screen
+  useEffect(() => {
+    return () => {
+      // Replace 'dorx123' with your dynamic room if needed
+      deliveredSocket.emit("app_leave_room", "dorx123");
+    };
+  }, []);
+
+  // Socket test function (optional, for UI button or debug)
+  const sendUpdatedReturnData = () => {
+    console.log("Testing Socket Connection...");
+    if (!deliveredSocket.connected) {
+      deliveredSocket.connect();
+    }
+    deliveredSocket.emit("join_room", "dorx123");
+    deliveredSocket.emit("send_updated_data", {
+      roomId: "dorx123",
+      transactionType: "Returned",
+    });
+  };
   const router = useRouter();
 
   const { playSuccess, playError, playWarning } = useScannerSounds();
@@ -223,6 +251,21 @@ export default function RTSIncomingScreen() {
           <Text style={styles.subtitle}>Return RTS items to clients</Text>
         </View>
         <View style={{ width: 40 }} />
+      </View>
+
+      {/* SOCKET TEST BUTTON */}
+      <View style={{ alignItems: "center", marginVertical: 8 }}>
+        <TouchableOpacity
+          style={{
+            backgroundColor: "#22c55e",
+            paddingVertical: 8,
+            paddingHorizontal: 20,
+            borderRadius: 8,
+          }}
+          onPress={sendUpdatedReturnData}
+        >
+          <Text style={{ color: "#fff", fontWeight: "bold" }}>Socket Test</Text>
+        </TouchableOpacity>
       </View>
 
       <BarcodeScanner onScan={onScan} scanned={scanned} />
