@@ -1,20 +1,38 @@
-import { Colors } from "@/constants/theme";
-import { useColorScheme } from "@/hooks/use-color-scheme";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import Feather from "@expo/vector-icons/Feather";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import { Tabs } from "expo-router";
 import React from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const insets = useSafeAreaInsets();
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
+        tabBarActiveTintColor: "#22c55e",
+        tabBarInactiveTintColor: "#94a3b8",
         headerShown: false,
+        tabBarStyle: {
+          backgroundColor: "#0a0f2e",
+          borderTopWidth: 0,
+          elevation: 20,
+          shadowColor: "#000",
+          shadowOpacity: 0.08,
+          shadowRadius: 16,
+          shadowOffset: { width: 0, height: -4 },
+          height: 64 + insets.bottom,
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 10,
+          paddingTop: 8,
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: "600",
+          letterSpacing: 0.3,
+          marginTop: 2,
+        },
       }}
     >
       <Tabs.Screen
@@ -22,7 +40,7 @@ export default function TabLayout() {
         options={{
           title: "Bookings",
           tabBarIcon: ({ color }) => (
-            <Feather size={18} name="calendar" color={color} />
+            <Feather size={22} name="package" color={color} />
           ),
         }}
       />
@@ -32,7 +50,7 @@ export default function TabLayout() {
         options={{
           title: "Scan",
           tabBarIcon: ({ color }) => (
-            <FontAwesome5 size={18} name="qrcode" color={color} />
+            <FontAwesome5 size={20} name="qrcode" color={color} />
           ),
         }}
       />
@@ -42,7 +60,7 @@ export default function TabLayout() {
         options={{
           title: "History",
           tabBarIcon: ({ color }) => (
-            <AntDesign size={18} name="history" color={color} />
+            <AntDesign size={22} name="clock-circle" color={color} />
           ),
         }}
       />
@@ -52,7 +70,7 @@ export default function TabLayout() {
         options={{
           title: "Account",
           tabBarIcon: ({ color }) => (
-            <FontAwesome size={18} name="user-o" color={color} />
+            <FontAwesome size={22} name="user-circle-o" color={color} />
           ),
         }}
       />

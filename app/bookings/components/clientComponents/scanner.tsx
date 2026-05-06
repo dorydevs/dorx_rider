@@ -254,60 +254,52 @@ export default function scanClientScheduledParcel() {
 
   return (
     <View style={styles.container}>
-      {/* CAMERA */}
-      <BarcodeScanner onScan={onScan} scanned={scanned} />
+      {/* HEADER */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <Ionicons name="chevron-back" size={22} color="#22c55e" />
+        </TouchableOpacity>
+        <View style={styles.headerTextContainer}>
+          <Text style={styles.title}>Scan Items</Text>
+          <Text style={styles.subtitle}>Align barcode within the frame</Text>
+        </View>
+        <View style={styles.countBadge}>
+          <Text style={styles.countText}>{totalPendingCount}</Text>
+        </View>
+      </View>
 
-      {/* SCANNING STATUS */}
-      <View style={styles.statusContainer}>
+      {/* SCANNER */}
+      <View style={{ flex: 1 }}>
+        <BarcodeScanner
+          onScan={onScan}
+          scanned={scanned}
+          isProcessing={loadingScan}
+        />
+      </View>
+
+      {/* BOTTOM BAR */}
+      <View style={styles.bottomBar}>
+        <View style={styles.scanCountCard}>
+          <Text style={styles.scanCountNumber}>{scannedData.length}</Text>
+          <Text style={styles.scanCountLabel}>Scanned</Text>
+        </View>
         <View
           style={[
-            styles.statusIndicator,
-            { backgroundColor: scanned ? "#ef4444" : "#22c55e" },
+            styles.scanCountCard,
+            { borderColor: "#FED7AA", shadowColor: "#f97316" },
           ]}
-        />
-        <Text style={styles.statusText}>
-          {loadingScan
-            ? "Processing..."
-            : scanned
-              ? "Camera Locked"
-              : "Ready to Scan"}
-        </Text>
-      </View>
-
-      <View
-        style={{
-          padding: 20,
-          elevation: 4,
-          backgroundColor: "white",
-          flexDirection: "column",
-          alignItems: "center",
-          borderRadius: 16,
-          marginTop: 20,
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 4,
-        }}
-      >
-        <Text
-          style={{
-            fontSize: 20,
-            fontWeight: "600",
-            color: "#2c3e50",
-            marginBottom: 4,
-          }}
         >
-          Items Remaining
-        </Text>
-        <Text style={{ fontSize: 32, fontWeight: "700", color: "#22c55e" }}>
-          {totalPendingCount}
-        </Text>
-        <Text style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>
-          {scannedData.length} scanned
-        </Text>
+          <Text style={[styles.scanCountNumber, { color: "#f97316" }]}>
+            {totalPendingCount}
+          </Text>
+          <Text style={styles.scanCountLabel}>Remaining</Text>
+        </View>
       </View>
 
-      {scanResultMessage && (
+      {scanResultMessage !== "" && (
         <View
           style={[
             styles.resultAlert,
@@ -326,7 +318,7 @@ export default function scanClientScheduledParcel() {
                   ? "warning"
                   : "close-circle"
             }
-            size={24}
+            size={20}
             color={
               alertColor === "green"
                 ? "#22c55e"
@@ -483,61 +475,86 @@ export default function scanClientScheduledParcel() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    marginTop: 30,
-    padding: 15,
+    backgroundColor: "#fff",
   },
-  card: {
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: "#ffffff",
+  header: {
     flexDirection: "row",
     alignItems: "center",
-    elevation: 2,
+    paddingTop: 50,
+    paddingBottom: 14,
+    paddingHorizontal: 16,
+    backgroundColor: "#fff",
+  },
+  headerTextContainer: {
+    flex: 1,
   },
   backButton: {
     width: 40,
     height: 40,
+    borderRadius: 12,
+    backgroundColor: "#DCFCE7",
     justifyContent: "center",
-    marginRight: -10,
+    alignItems: "center",
+    marginRight: 12,
   },
   title: {
-    fontSize: 15,
-    fontWeight: "bold",
-    color: "#4ade80",
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#111827",
   },
   subtitle: {
-    fontSize: 16,
-    opacity: 0.7,
-    marginBottom: 30,
+    fontSize: 13,
+    color: "#6b7280",
+    marginTop: 2,
   },
-  content: {
-    marginTop: 40,
+  countBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "#DCFCE7",
     justifyContent: "center",
     alignItems: "center",
   },
-  description: {
+  countText: {
     fontSize: 16,
-    textAlign: "center",
-    marginTop: 20,
-    opacity: 0.8,
+    fontWeight: "800",
+    color: "#22c55e",
   },
-  statusContainer: {
+  bottomBar: {
     flexDirection: "row",
+    backgroundColor: "#fff",
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 12,
+    gap: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#f0f0f0",
+  },
+  scanCountCard: {
+    flex: 1,
+    backgroundColor: "#fff",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 14,
     alignItems: "center",
-    justifyContent: "center",
-    marginTop: 12,
-    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: "#D1FAE5",
+    shadowColor: "#22c55e",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  statusIndicator: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 8,
+  scanCountNumber: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#22c55e",
   },
-  statusText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
+  scanCountLabel: {
+    fontSize: 11,
+    fontWeight: "500",
+    color: "#64748B",
+    marginTop: 2,
   },
   resultAlert: {
     marginTop: 20,

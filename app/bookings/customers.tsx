@@ -1,22 +1,29 @@
-import AnimatedDrawer from "@/components/AnimatedDrawer";
+﻿import AnimatedDrawer from "@/components/AnimatedDrawer";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { useScannerSounds } from "@/components/ScannerSounds";
 import { useAppSelector } from "@/store/hooks";
 import axiosInstance from "@/utils/axiosInstance";
-import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
-import { CameraType, CameraView, useCameraPermissions } from "expo-camera";
+import { CameraView, useCameraPermissions } from "expo-camera";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import {
+  ArrowLeft,
+  Camera,
+  CheckCircle,
+  Package,
+  RotateCcw,
+  ScanLine,
+  User,
+  X,
+} from "lucide-react-native";
 import moment from "moment";
 import { useCallback, useEffect, useRef, useState } from "react";
-
 import {
   ActivityIndicator,
   BackHandler,
-  Dimensions,
   Image,
   Keyboard,
   ScrollView,
@@ -32,30 +39,24 @@ import { Button } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ViewShot, { captureRef } from "react-native-view-shot";
 
-const { width: any } = Dimensions.get("window");
-
-const ALERT_COLORS: Record<
-  string,
-  { border: string; bg: string; text: string }
-> = {
-  green: { border: "#16a34a", bg: "#22c55e", text: "#ffffff" },
-  red: { border: "#dc2626", bg: "#dc2626", text: "#ffffff" },
-  yellow: { border: "#d97706", bg: "#f59e0b", text: "#ffffff" },
-  blue: { border: "#16a34a", bg: "#22c55e", text: "#ffffff" },
-  orange: { border: "#ea580c", bg: "#f97316", text: "#ffffff" },
+const ATTEMPT_COLORS: Record<string, { bg: string; text: string }> = {
+  first: { bg: "#f0fdf4", text: "#16a34a" },
+  second: { bg: "#fefce8", text: "#a16207" },
+  third: { bg: "#fff7ed", text: "#c2410c" },
+  reached: { bg: "#fef2f2", text: "#dc2626" },
 };
 
 export default function CustomersScreen() {
   const router = useRouter();
   const viewShotRef = useRef(null);
-  const [visible, setVisible] = useState(false);
-  const [locationDenied, setLocationDenied] = useState(false);
-  const { playSuccess, playError, playWarning } = useScannerSounds();
+  const [, setVisible] = useState(false);
+  const [, setLocationDenied] = useState(false);
+  const { playSuccess, playError } = useScannerSounds();
   const [data, setData] = useState<any>("");
   const [scanned, setScanned] = useState(false);
   const user = useAppSelector((state: any) => state.user.user);
   const [userData, setUserData] = useState<any>(null);
-  const [invalid, setInvalid] = useState(false);
+  const [, setInvalid] = useState(false);
   const [loadingScan, setLoadingScan] = useState(false);
   const [scanResultMessage, setScanResultMessage] = useState("");
   const [alertColor, setAlertColor] = useState<
@@ -63,7 +64,7 @@ export default function CustomersScreen() {
   >("blue");
   const [waybillDetails, setWaybillDetails] = useState<any>({});
   const [success, setSuccess] = useState(false);
-  const { clientData } = useLocalSearchParams();
+  useLocalSearchParams();
   const [isPODActive, setIsPODActive] = useState(false);
   const [showReturn, setShowReturn] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -74,12 +75,11 @@ export default function CustomersScreen() {
   const [attemptsMessage, setAttemptsMessage] = useState<any>("");
   const [attemptReached, setAttemptReached] = useState<boolean>(false);
   const [previewReady, setPreviewReady] = useState(false);
-  const [orderNumber, setOrderNumber] = useState<any>("");
+  const [, setOrderNumber] = useState<any>("");
   const [permission, requestPermission] = useCameraPermissions();
-  const [facing, setFacing] = useState<CameraType>("back");
+
   const cameraRef = useRef<CameraView | null>(null);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
-  const [photoToUpload, setPhotoToUpload] = useState<string | null>(null);
   const [imageCapturingloading, setImageCapturingloading] =
     useState<boolean>(false);
   const [previewKey, setPreviewKey] = useState(0);
@@ -89,13 +89,10 @@ export default function CustomersScreen() {
     latitude: number;
     longitude: number;
   } | null>(null);
-  const [scanCount, setScanCount] = useState(0);
+  const [, setScanCount] = useState(0);
 
   const bottomDrawerRef = useRef<any>(null);
   const cameraButtomDrawer = useRef<any>(null);
-
-  console.log(">>>> ", showReturn);
-
   const bottomDrawerForReturnref = useRef<any>(null);
 
   useFocusEffect(
@@ -123,9 +120,7 @@ export default function CustomersScreen() {
   const closeCameraDrawer = () => {
     setIsPODActive(false);
     cameraButtomDrawer.current?.close();
-    setTimeout(() => {
-      setShowScanner(true);
-    }, 300);
+    setTimeout(() => setShowScanner(true), 300);
   };
 
   useEffect(() => {
@@ -135,22 +130,16 @@ export default function CustomersScreen() {
       const { data } = await axiosInstance(userData.token).get(
         `/api/rider/delivery-attempts/${waybillDetails.orderTransactionId}`,
       );
-
-      if (data.length === 0) {
-        setAttempts("first");
-      } else if (data.length === 1) {
-        setAttempts("second");
-      } else if (data.length === 2) {
-        setAttempts("third");
-      } else if (data.length === 3) {
+      if (data.length === 0) setAttempts("first");
+      else if (data.length === 1) setAttempts("second");
+      else if (data.length === 2) setAttempts("third");
+      else if (data.length === 3) {
         setAttempts("reached");
         setAttemptReached(true);
       }
       setAttemptsLoading(false);
     };
-    if (waybillDetails.orderTransactionId && userData) {
-      handleAttempChecker();
-    }
+    if (waybillDetails.orderTransactionId && userData) handleAttempChecker();
   }, [waybillDetails, userData]);
 
   const onSave = async () => {
@@ -158,13 +147,6 @@ export default function CustomersScreen() {
       try {
         setLoading(true);
         Keyboard.dismiss();
-        console.log("API CALL");
-        console.log({
-          attempt: attempts,
-          orderTransactionId: waybillDetails.orderTransactionId,
-          riderId: userData.id,
-          remarks: reason,
-        });
         await axiosInstance(userData.token).post(
           `/api/rider/delivery-attempts`,
           {
@@ -174,10 +156,7 @@ export default function CustomersScreen() {
             remarks: reason,
           },
         );
-        console.log(attempts === "third");
-
         if (attempts === "third") {
-          console.log("NATAWAG BA TONG FOR RETURN");
           onUpdateWaybillStatus("For Return");
           await axiosInstance(userData.token).put(
             `/api/orderTransactions/updateWaybillStatus`,
@@ -190,25 +169,12 @@ export default function CustomersScreen() {
           bottomDrawerForReturnref.current?.close();
           cameraButtomDrawer.current?.close();
         }
-        console.log("END API CALL");
-        // Toast.show({
-        //   content: (
-        //     <span className="text-lg">
-        //       {attempts.replace(/^\w/, (c) => c.toUpperCase())} Delivery Attempt
-        //       Saved
-        //     </span>
-        //   ),
-        // });
-        // bottomDrawerRef.current?.close();
-        // bottomDrawerForReturnref.current?.close();
         setShowReturn(false);
         setLoading(false);
         setReason("");
       } catch (error: any) {
         setReason("");
         setLoading(false);
-        console.log("onSave ", error);
-        console.log("ERROR DATA:", error.response?.data);
         setAttemptsMessage(error.response?.data);
       }
     }
@@ -225,15 +191,10 @@ export default function CustomersScreen() {
     const loadUserData = async () => {
       try {
         const storedUser = await AsyncStorage.getItem("user");
-        if (storedUser) {
-          setUserData(JSON.parse(storedUser));
-        } else if (user) {
-          setUserData(user);
-        }
+        if (storedUser) setUserData(JSON.parse(storedUser));
+        else if (user) setUserData(user);
       } catch (error) {
         console.error("Error loading user data:", error);
-      } finally {
-        console.log("SUCCESS");
       }
     };
     loadUserData();
@@ -250,7 +211,6 @@ export default function CustomersScreen() {
             `/api/orderTransactions/fetchOrderTransactionByOrderNumber?orderNumber=${data?.data}`,
           );
           setOrderNumber(data?.data);
-          console.log("waybillData : >>> ", waybillData);
           if (waybillData.waybillStatus === "Delivering") {
             if (
               userData.assignedBarangays.includes(waybillData.receiverBarangay)
@@ -285,10 +245,9 @@ export default function CustomersScreen() {
           setLoadingScan(false);
           setSuccess(false);
           setScanned(false);
-        } catch (error) {
+        } catch {
           setLoadingScan(false);
           setScanResultMessage("ERROR SCAN");
-          console.log("Customer Scan ERROR : >> ", error);
           setScanned(false);
           playError();
         } finally {
@@ -300,71 +259,47 @@ export default function CustomersScreen() {
         }
       }
     }
-    if (userData !== null) {
-      processScan();
-    }
-  }, [data, userData]);
+    if (userData !== null) processScan();
+  }, [data, userData, playError, playSuccess]);
 
   const onUpdateWaybillStatus = async (status: any) => {
     setLoading(true);
     try {
-      if (!viewShotRef.current) return;
-      if (!previewReady) {
-        console.log("Preview not ready yet...");
-        return;
-      }
-
+      if (!viewShotRef.current || !previewReady) return;
       await new Promise((resolve) => setTimeout(resolve, 300));
-
       const tmpUri = await captureRef(viewShotRef.current, {
         format: "jpg",
         quality: 0.8,
         result: "tmpfile",
       });
-
       const uniqueUri = FileSystem?.cacheDirectory + `pod-${Date.now()}.jpg`;
-
       await FileSystem.copyAsync({ from: tmpUri, to: uniqueUri });
-
-      const finalImageUri = uniqueUri;
       const formData = new FormData();
-      const filename = finalImageUri.split("/").pop();
+      const filename = uniqueUri.split("/").pop();
       const match = /\.(\w+)$/.exec(filename || "");
       const type = match ? `image/${match[1]}` : `image`;
-
       formData.append("orderTransactionId", waybillDetails.orderTransactionId);
       formData.append("waybillStatus", status);
-      console.log("finalImageUri : >>> ", finalImageUri);
-      formData.append("image", {
-        uri: finalImageUri,
-        name: filename,
-        type: type,
-      } as any);
-
+      formData.append("image", { uri: uniqueUri, name: filename, type } as any);
       const { data: responseData } = await axiosInstance(userData.token).put(
         `/api/orderTransactions/updateWaybillStatus`,
         formData,
         { headers: { "Content-Type": "multipart/form-data" } },
       );
-
       if (responseData?.message === "Successfully Updated") {
         setSuccess(true);
         if (status === "Delivered") {
-          const logScanData = await axiosInstance(userData.token).post(
-            `/api/log-scan`,
-            {
-              shippingFee: responseData.receivableFreight,
-              transactionType: "outbound",
-              wareHouseId: userData.storeId,
-              wareHouseType: "store",
-              orderTransactionId: waybillDetails.orderTransactionId,
-            },
-          );
+          await axiosInstance(userData.token).post(`/api/log-scan`, {
+            shippingFee: responseData.receivableFreight,
+            transactionType: "outbound",
+            wareHouseId: userData.storeId,
+            wareHouseType: "store",
+            orderTransactionId: waybillDetails.orderTransactionId,
+          });
           bottomDrawerRef.current?.close();
           bottomDrawerForReturnref.current?.close();
           cameraButtomDrawer.current?.close();
           setShowReturn(false);
-          console.log(">>> logScanData:", logScanData);
           setSuccessMessage("Successfully Delivered");
         } else if (status === "For Return") {
           setSuccessMessage("Successfully Updated - For Return");
@@ -374,15 +309,11 @@ export default function CustomersScreen() {
       setPreviewKey((prev) => prev + 1);
       setPhotoUri(null);
       setImageLoading(false);
-      setTimeout(() => {
-        setShowScanner(true);
-      }, 300);
-    } catch (error) {
+      setTimeout(() => setShowScanner(true), 300);
+    } catch {
       setPhotoUri(null);
       setImageLoading(false);
-      console.log("onUpdateWaybillStatus ERROR : >>> ", error);
     }
-
     setLoading(false);
   };
 
@@ -402,47 +333,44 @@ export default function CustomersScreen() {
     if (!cameraRef.current) return;
     setImageCapturingloading(true);
     setImageLoading(true);
-
     try {
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.7,
         skipProcessing: true,
       });
       setPreviewReady(false);
-
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
         setVisible(true);
         setLocationDenied(true);
         throw new Error("Permission denied");
       }
-
       let loc: any = await Location.getLastKnownPositionAsync();
       if (!loc) {
         const timeout = new Promise((_, reject) =>
           setTimeout(() => reject(new Error("timed out")), 15000),
         );
-        const posPromise = Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
-        loc = await Promise.race([posPromise, timeout]);
+        loc = await Promise.race([
+          Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          }),
+          timeout,
+        ]);
       }
       if (!loc?.coords) throw new Error("Failed to get coords");
-      const { latitude, longitude } = loc.coords;
-      setCoords({ latitude, longitude });
+      setCoords({
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+      });
       setPhotoUri(photo.uri);
-    } catch (err) {
+    } catch {
       setImageLoading(false);
-      console.log("Error capturing photo:", err);
     } finally {
       setImageCapturingloading(false);
     }
   };
 
-  if (!permission) {
-    return <View />;
-  }
-
+  if (!permission) return <View />;
   if (!permission.granted) {
     return (
       <View style={styles.container}>
@@ -459,86 +387,82 @@ export default function CustomersScreen() {
     setCoords(null);
     setImageLoading(false);
   };
-
   const submitPhoto = () => {
     if (!photoUri) return;
     onUpdateWaybillStatus("Delivered");
   };
 
-  const colors = ALERT_COLORS[alertColor] ?? ALERT_COLORS.green;
+  const w = waybillDetails;
+  const recipientName = [
+    w.receiverFirstName,
+    w.receiverMiddleName,
+    w.receiverLastName,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const attemptStyle = ATTEMPT_COLORS[attempts] ?? ATTEMPT_COLORS.first;
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* HEADER */}
+      {/* â”€â”€ HEADER â”€â”€ */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Ionicons name="arrow-back" size={22} color="#1F2937" />
+          <ArrowLeft size={20} color="#22c55e" strokeWidth={2.5} />
         </TouchableOpacity>
         <View style={styles.headerTextContainer}>
           <Text style={styles.title}>Customer Delivery</Text>
           <Text style={styles.subtitle}>Scan orders for delivery</Text>
         </View>
-        <View style={{ width: 40 }} />
-      </View>
-
-      {/* SCANNER */}
-      <View style={styles.scannerContainer}>
-        {showScanner && (
-          <BarcodeScanner
-            key="background-scanner"
-            onScan={onScan}
-            scanned={scanned}
-          />
-        )}
-
-        {/* SCANNING STATUS — pinned to bottom of scanner */}
-        <View style={styles.statusContainer}>
-          <View
-            style={[
-              styles.statusIndicator,
-              {
-                backgroundColor: loadingScan
-                  ? "#f59e0b"
-                  : scanned
-                    ? "#ef4444"
-                    : "#22c55e",
-              },
-            ]}
-          />
-          <Text style={styles.statusText}>
-            {loadingScan
-              ? "Processing..."
-              : scanned
-                ? "Camera Locked"
-                : "Ready to Scan"}
-          </Text>
+        <View style={styles.scanIconBadge}>
+          <ScanLine size={22} color="#22c55e" strokeWidth={2} />
         </View>
       </View>
 
-      {/* SCAN RESULT ALERT */}
-      {data ? (
+      {/* â”€â”€ SCANNER â”€â”€ */}
+      <View style={{ flex: 1 }}>
+        {showScanner && (
+          <BarcodeScanner
+            key="customer-scanner"
+            onScan={onScan}
+            scanned={scanned}
+            isProcessing={loadingScan}
+          />
+        )}
+      </View>
+
+      {/* â”€â”€ SCAN RESULT ALERT â”€â”€ */}
+      {scanResultMessage !== "" && (
         <View
           style={[
             styles.resultAlert,
-            { borderColor: colors.border, backgroundColor: colors.bg },
+            alertColor === "green"
+              ? styles.resultAlertGreen
+              : styles.resultAlertRed,
           ]}
         >
-          {loadingScan ? (
-            <Text style={[styles.resultText, { color: colors.text }]}>
-              Scanning...
-            </Text>
-          ) : (
-            <Text style={[styles.resultText, { color: colors.text }]}>
-              {scanResultMessage}
-            </Text>
-          )}
+          <View
+            style={[
+              styles.resultDot,
+              {
+                backgroundColor: alertColor === "green" ? "#22c55e" : "#ef4444",
+              },
+            ]}
+          />
+          <Text
+            style={[
+              styles.resultText,
+              { color: alertColor === "green" ? "#15803d" : "#dc2626" },
+            ]}
+          >
+            {scanResultMessage}
+          </Text>
         </View>
-      ) : null}
+      )}
 
-      {/* BOTTOM DRAWER - Order Details */}
+      {/* â”€â”€ BOTTOM DRAWER â€” Order Details â”€â”€ */}
       <BottomDrawer
         ref={bottomDrawerRef}
         initialHeight={570}
@@ -547,128 +471,180 @@ export default function CustomersScreen() {
         closeOnPressBack={false}
         gestureMode="none"
       >
-        <View style={{ padding: 20 }}>
-          <ScrollView style={styles.containerTwo}>
-            {scanResultMessage && (
-              <View style={{ alignItems: "center" }}>
-                <View
-                  style={{
-                    padding: 20,
-                    borderRadius: 20,
-                    alignItems: "center",
-                    backgroundColor: "#22c55e",
-                    width: 300,
-                    marginBottom: 10,
-                  }}
+        <View style={styles.drawerHandle} />
+        <ScrollView
+          contentContainerStyle={styles.drawerContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Identity card */}
+          <View style={styles.identityCard}>
+            <View style={styles.identityLeft}>
+              <Text style={styles.identityOrderLabel}>ORDER NUMBER</Text>
+              <Text style={styles.identityOrderValue}>
+                {w.orderNumber ?? "â€”"}
+              </Text>
+              {w.waybillNumber && (
+                <Text style={styles.identityWaybill}>
+                  Waybill: {w.waybillNumber}
+                </Text>
+              )}
+            </View>
+            {attempts !== "" && (
+              <View
+                style={[
+                  styles.attemptBadge,
+                  { backgroundColor: attemptStyle.bg },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.attemptBadgeText,
+                    { color: attemptStyle.text },
+                  ]}
                 >
-                  <Text
-                    style={{
-                      textAlign: "center",
-                      width: "90%",
-                      color: "white",
-                      fontWeight: "600",
-                      fontSize: 15,
-                    }}
-                  >
-                    {scanResultMessage}
-                  </Text>
-                </View>
-              </View>
-            )}
-
-            {/* Order Card */}
-            <View style={styles.card}>
-              <View>
-                <Text>
-                  <Text style={{ fontWeight: "bold" }}>Delivery Attempts</Text>{" "}
-                  : {attempts.toUpperCase()}
+                  {attempts.toUpperCase()} ATTEMPT
                 </Text>
               </View>
-              <Text style={styles.boldText}>{waybillDetails?.itemName}</Text>
-              <Text>{waybillDetails?.orderNumber}</Text>
-              <View style={styles.divider} />
-              <Text>
-                <Text style={{ fontWeight: "bold" }}>COD Value:</Text>{" "}
-                {waybillDetails?.codValue}
-              </Text>
-              <Text>
-                <Text style={{ fontWeight: "bold" }}>Item Weight:</Text>{" "}
-                {waybillDetails?.itemWeight}{" "}
-              </Text>
-              <Text>
-                <Text style={{ fontWeight: "bold" }}> Number of Item: </Text>{" "}
-                {waybillDetails?.numberOfItem}
-              </Text>
-              <Text>
-                <Text style={{ fontWeight: "bold" }}> Recipient: </Text>
-                {`${waybillDetails?.receiverFirstName} ${waybillDetails?.receiverMiddleName} ${waybillDetails?.receiverLastName}`}
-              </Text>
-              <Text>
-                {" "}
-                <Text style={{ fontWeight: "bold" }}>Phone:</Text>{" "}
-                {waybillDetails?.receiverPhone}
+            )}
+          </View>
+
+          {/* Item Details */}
+          <View style={styles.sectionCard}>
+            <View
+              style={[styles.sectionCardHeader, { borderLeftColor: "#22c55e" }]}
+            >
+              <View
+                style={[
+                  styles.sectionIconWrap,
+                  { backgroundColor: "#22c55e18" },
+                ]}
+              >
+                <Package size={13} color="#22c55e" strokeWidth={2.5} />
+              </View>
+              <Text style={[styles.sectionCardTitle, { color: "#22c55e" }]}>
+                Item Details
               </Text>
             </View>
+            {w.itemName && (
+              <TableRow label="Item Name" value={w.itemName} highlight />
+            )}
+            {w.codValue && (
+              <TableRow
+                label="COD Value"
+                value={`â‚± ${parseFloat(w.codValue).toFixed(2)}`}
+                highlight
+              />
+            )}
+            {w.itemWeight && (
+              <TableRow label="Weight" value={`${w.itemWeight} kg`} />
+            )}
+            {w.numberOfItem && (
+              <TableRow label="Quantity" value={String(w.numberOfItem)} />
+            )}
+            {w.pouchesSize && (
+              <TableRow label="Pouch Size" value={w.pouchesSize} />
+            )}
+          </View>
 
-            {/* Status Area */}
-            {loading ? (
-              <View style={styles.center}>
-                <ActivityIndicator size="large" />
-                <Text style={{ marginTop: 8 }}>Updating...</Text>
+          {/* Recipient */}
+          <View style={styles.sectionCard}>
+            <View
+              style={[styles.sectionCardHeader, { borderLeftColor: "#f97316" }]}
+            >
+              <View
+                style={[
+                  styles.sectionIconWrap,
+                  { backgroundColor: "#f9731618" },
+                ]}
+              >
+                <User size={13} color="#f97316" strokeWidth={2.5} />
               </View>
-            ) : success ? (
-              <View style={styles.center}>
-                <Text style={styles.successText}>✅</Text>
-                <Text>{successMessage}</Text>
-              </View>
-            ) : (
-              <>
-                {!attemptReached ? (
-                  <>
-                    <TouchableOpacity
-                      style={[styles.button, styles.successButton]}
-                      onPress={() => openCameraDrawer()}
-                    >
-                      <Text style={styles.buttonText}>Mark As Delivered</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.button, styles.warningButton]}
-                      onPress={() => {
-                        setShowReturn(true);
-                        bottomDrawerRef.current?.close();
-                      }}
-                    >
-                      <Text style={styles.buttonText}>Mark As For Return</Text>
-                    </TouchableOpacity>
-                  </>
-                ) : (
-                  <Text
-                    style={{
-                      textAlign: "center",
-                      fontSize: 15,
-                      color: "tomato",
-                      padding: 10,
+              <Text style={[styles.sectionCardTitle, { color: "#f97316" }]}>
+                Recipient
+              </Text>
+            </View>
+            {recipientName && (
+              <TableRow label="Name" value={recipientName} highlight />
+            )}
+            {w.receiverPhone && (
+              <TableRow label="Phone" value={w.receiverPhone} />
+            )}
+            {w.receiverAddress && (
+              <TableRow label="Address" value={w.receiverAddress} />
+            )}
+            {(w.receiverBarangay || w.receiverCity || w.receiverProvince) && (
+              <TableRow
+                label="Location"
+                value={[w.receiverBarangay, w.receiverCity, w.receiverProvince]
+                  .filter(Boolean)
+                  .join(", ")}
+              />
+            )}
+          </View>
+
+          {/* Actions */}
+          {attemptsLoading ? (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator size="small" color="#22c55e" />
+              <Text style={styles.loadingText}>
+                Checking delivery attempts...
+              </Text>
+            </View>
+          ) : loading ? (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator size="large" color="#22c55e" />
+              <Text style={styles.loadingText}>Updating...</Text>
+            </View>
+          ) : success ? (
+            <View style={styles.successBox}>
+              <CheckCircle size={40} color="#22c55e" strokeWidth={2} />
+              <Text style={styles.successBoxText}>{successMessage}</Text>
+            </View>
+          ) : (
+            <View style={styles.actionRow}>
+              {!attemptReached ? (
+                <>
+                  <TouchableOpacity
+                    style={styles.actionBtn}
+                    onPress={openCameraDrawer}
+                  >
+                    <Camera size={18} color="#fff" strokeWidth={2} />
+                    <Text style={styles.actionBtnText}>Mark Delivered</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.actionBtn, styles.actionBtnAmber]}
+                    onPress={() => {
+                      setShowReturn(true);
+                      bottomDrawerRef.current?.close();
                     }}
                   >
-                    This item is for return to seller {`(RTS)`}
+                    <RotateCcw size={18} color="#fff" strokeWidth={2} />
+                    <Text style={styles.actionBtnText}>For Return</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <View style={styles.rtsWarning}>
+                  <RotateCcw size={18} color="#dc2626" strokeWidth={2} />
+                  <Text style={styles.rtsWarningText}>
+                    This item is for return to seller (RTS)
                   </Text>
-                )}
-              </>
-            )}
+                </View>
+              )}
+            </View>
+          )}
 
-            {/* Close Button */}
-            <TouchableOpacity
-              style={[styles.button, styles.closeButton]}
-              onPress={() => onCloseBottomDrawer()}
-              disabled={loading}
-            >
-              <Text style={styles.buttonText}>Close</Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
+          <TouchableOpacity
+            style={styles.closeBtn}
+            onPress={onCloseBottomDrawer}
+            disabled={loading}
+          >
+            <X size={16} color="#64748b" strokeWidth={2.5} />
+            <Text style={styles.closeBtnText}>Close</Text>
+          </TouchableOpacity>
+        </ScrollView>
       </BottomDrawer>
 
-      {/* BOTTOM DRAWER - Camera/POD */}
+      {/* â”€â”€ BOTTOM DRAWER â€” Camera/POD â”€â”€ */}
       <BottomDrawer
         ref={cameraButtomDrawer}
         initialHeight={650}
@@ -677,7 +653,13 @@ export default function CustomersScreen() {
         closeOnPressBack={false}
         gestureMode="none"
       >
-        <View style={{ padding: 20 }}>
+        <View style={styles.drawerHandle} />
+        <View style={styles.cameraDrawerContent}>
+          <View style={styles.cameraDrawerHeader}>
+            <Camera size={16} color="#22c55e" strokeWidth={2.5} />
+            <Text style={styles.cameraDrawerTitle}>Proof of Delivery</Text>
+          </View>
+
           {isPODActive && !photoUri ? (
             <CameraView
               key="drawer-camera"
@@ -698,38 +680,18 @@ export default function CustomersScreen() {
                     setImageLoading(false);
                     setPreviewReady(true);
                   }}
-                  source={{ uri: photoUri || "" }}
+                  source={{ uri: photoUri }}
                   style={styles.camera}
                 />
-
                 {imageLoading && (
                   <View style={styles.imageLoadingOverlay}>
                     <ActivityIndicator size="large" color="#fff" />
-                    <Text style={styles.imageLoadingText}>
-                      Image Capturing...
-                    </Text>
+                    <Text style={styles.imageLoadingText}>Capturing...</Text>
                   </View>
                 )}
-
-                {/* Coords only shown after image is fully loaded */}
-                {!imageLoading && imageCapturingloading && (
-                  <View style={styles.coordContainer}>
-                    <Text style={styles.coordText}>
-                      Coordinates still processing...
-                    </Text>
-                  </View>
-                )}
-
                 {!imageLoading && !imageCapturingloading && coords && (
                   <View style={styles.coordContainer}>
-                    <View
-                      style={{
-                        height: 70,
-                        width: "30%",
-                        borderRadius: 20,
-                        overflow: "hidden",
-                      }}
-                    >
+                    <View style={styles.coordMapThumb}>
                       <MapView
                         style={{ flex: 1 }}
                         collapsable={false}
@@ -746,8 +708,8 @@ export default function CustomersScreen() {
                       </MapView>
                     </View>
                     <View>
-                      <Text style={{ fontSize: 11, color: "white" }}>
-                        {moment().format("DD-MM-YYYY-hh:mm:ss-A")}
+                      <Text style={styles.coordTimestamp}>
+                        {moment().format("DD-MM-YYYY hh:mm A")}
                       </Text>
                       <Text style={styles.coordText}>
                         Lat: {coords.latitude.toFixed(6)}
@@ -755,8 +717,8 @@ export default function CustomersScreen() {
                       <Text style={styles.coordText}>
                         Lng: {coords.longitude.toFixed(6)}
                       </Text>
-                      <Text style={{ fontSize: 12, color: "white" }}>
-                        WBN : {waybillDetails.waybillNumber}
+                      <Text style={styles.coordText}>
+                        WBN: {w.waybillNumber}
                       </Text>
                     </View>
                   </View>
@@ -765,15 +727,15 @@ export default function CustomersScreen() {
             </ViewShot>
           ) : null}
 
-          {/* Action buttons */}
-          <View style={{ flexDirection: "column", gap: 10, marginTop: 10 }}>
+          <View style={styles.cameraActions}>
             {!photoUri ? (
               <TouchableOpacity
-                style={[styles.button, styles.successButton]}
+                style={styles.actionBtn}
                 onPress={takePhoto}
                 disabled={loading}
               >
-                <Text style={styles.buttonText}>Take Photo</Text>
+                <Camera size={18} color="#fff" strokeWidth={2} />
+                <Text style={styles.actionBtnText}>Take Photo</Text>
               </TouchableOpacity>
             ) : (
               <>
@@ -794,14 +756,14 @@ export default function CustomersScreen() {
                   mode="contained"
                   disabled={loading}
                 >
-                  Cancel
+                  Retake
                 </Button>
               </>
             )}
             <Button
-              buttonColor="#9E9E9E"
+              buttonColor="#64748b"
               textColor="white"
-              onPress={() => closeCameraDrawer()}
+              onPress={closeCameraDrawer}
               mode="contained"
               disabled={loading}
             >
@@ -811,15 +773,20 @@ export default function CustomersScreen() {
         </View>
       </BottomDrawer>
 
+      {/* â”€â”€ ANIMATED DRAWER â€” Return Reason â”€â”€ */}
       <AnimatedDrawer visible={showReturn}>
         <ScrollView
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ paddingBottom: 100 }}
         >
-          <Text style={styles.label}>Reason for Return</Text>
+          <View style={styles.returnHeader}>
+            <RotateCcw size={18} color="#f97316" strokeWidth={2.5} />
+            <Text style={styles.returnTitle}>Reason for Return</Text>
+          </View>
           <TextInput
             style={styles.textArea}
             placeholder="Enter your reason here..."
+            placeholderTextColor="#94a3b8"
             multiline
             numberOfLines={5}
             textAlignVertical="top"
@@ -827,8 +794,10 @@ export default function CustomersScreen() {
             onChangeText={setReason}
           />
           {attemptsMessage !== "" && (
-            <View style={{ padding: 10, marginTop: -10 }}>
-              <Text style={{ color: "tomato" }}>{attemptsMessage.message}</Text>
+            <View style={styles.attemptsError}>
+              <Text style={styles.attemptsErrorText}>
+                {attemptsMessage.message}
+              </Text>
             </View>
           )}
           <View style={{ gap: 10 }}>
@@ -844,8 +813,8 @@ export default function CustomersScreen() {
             </Button>
             <Button
               disabled={loading}
-              textColor="black"
-              onPress={() => onCloseBottomDrawer()}
+              textColor="#64748b"
+              onPress={onCloseBottomDrawer}
               mode="outlined"
             >
               Close
@@ -857,168 +826,323 @@ export default function CustomersScreen() {
   );
 }
 
+// â”€â”€ inline helper component (defined outside to avoid re-render) â”€â”€
+function TableRow({
+  label,
+  value,
+  highlight,
+}: {
+  label: string;
+  value?: string | null;
+  highlight?: boolean;
+}) {
+  if (!value) return null;
+  return (
+    <View style={trStyles.row}>
+      <Text style={trStyles.label}>{label}</Text>
+      <Text style={[trStyles.value, highlight && trStyles.valueHL]}>
+        {value}
+      </Text>
+    </View>
+  );
+}
+const trStyles = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f8fafc",
+  },
+  label: {
+    fontSize: 12,
+    color: "#94a3b8",
+    fontWeight: "600",
+    flex: 1,
+    paddingRight: 8,
+  },
+  value: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#334155",
+    flex: 2,
+    textAlign: "right",
+  },
+  valueHL: { color: "#1e293b", fontWeight: "700" },
+});
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  container: { flex: 1, backgroundColor: "#fff" },
+
+  // Header
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: "#fff",
+    paddingTop: 10,
+    paddingBottom: 14,
+    backgroundColor: "#5a8a1a",
     borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
+    borderBottomColor: "#4a7a14",
   },
   headerTextContainer: { flex: 1 },
   backButton: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
     borderRadius: 12,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: "rgba(255,255,255,0.15)",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 10,
+    marginRight: 12,
   },
-  title: { fontSize: 22, fontWeight: "700", color: "#2c3e50" },
-  subtitle: { fontSize: 13, color: "#7f8c8d", marginTop: 2 },
-  scannerContainer: {
-    flex: 1,
-    margin: 20,
+  scanIconBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  title: { fontSize: 20, fontWeight: "700", color: "#fff" },
+  subtitle: { fontSize: 12, color: "rgba(255,255,255,0.7)", marginTop: 2 },
+
+  // Result alert
+  resultAlert: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginHorizontal: 16,
+    marginBottom: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  resultAlertGreen: { backgroundColor: "#f0fdf4", borderColor: "#bbf7d0" },
+  resultAlertRed: { backgroundColor: "#fef2f2", borderColor: "#fecaca" },
+  resultDot: { width: 8, height: 8, borderRadius: 4 },
+  resultText: { fontSize: 13, fontWeight: "600", flex: 1 },
+
+  // Drawer shared
+  drawerHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: "#e2e8f0",
+    borderRadius: 2,
+    alignSelf: "center",
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  drawerContent: { paddingHorizontal: 16, paddingBottom: 32, paddingTop: 4 },
+
+  // Identity card
+  identityCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#f8fafc",
     borderRadius: 16,
-    overflow: "hidden",
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
   },
-  statusContainer: {
-    position: "absolute",
-    bottom: 16,
-    left: 16,
-    right: 16,
+  identityLeft: { flex: 1 },
+  identityOrderLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#94a3b8",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+  },
+  identityOrderValue: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#1e293b",
+    marginTop: 2,
+  },
+  identityWaybill: {
+    fontSize: 12,
+    color: "#64748b",
+    marginTop: 4,
+    fontWeight: "500",
+  },
+  attemptBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    marginLeft: 8,
+  },
+  attemptBadgeText: { fontSize: 10, fontWeight: "800", letterSpacing: 0.5 },
+
+  // Section cards
+  sectionCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#f1f5f9",
+    overflow: "hidden",
+    elevation: 1,
+    shadowColor: "#94a3b8",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+  },
+  sectionCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: "#f8fafc",
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
+    borderLeftWidth: 3,
+  },
+  sectionIconWrap: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  sectionCardTitle: {
+    fontSize: 12,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
+
+  // Action buttons
+  actionRow: { flexDirection: "row", gap: 10, marginVertical: 12 },
+  actionBtn: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    backgroundColor: "rgba(240, 253, 244, 0.92)",
+    gap: 7,
+    backgroundColor: "#22c55e",
+    paddingVertical: 13,
+    borderRadius: 14,
   },
-  statusIndicator: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
-  statusText: { fontSize: 14, fontWeight: "600", color: "#15803D" },
-  resultAlert: {
-    marginHorizontal: 20,
-    marginBottom: 12,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
+  actionBtnAmber: { backgroundColor: "#f97316" },
+  actionBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  rtsWarning: {
+    flex: 1,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#fef2f2",
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#fecaca",
   },
-  resultText: { fontSize: 15, fontWeight: "600", textAlign: "center" },
-  buttonText: { color: "#fff", fontWeight: "bold" },
-  successButton: { backgroundColor: "#22c55e" },
-  cancelButton: { backgroundColor: "#dc2626" },
-  submitButton: { backgroundColor: "#22c55e" },
-  closeButton: { backgroundColor: "#9E9E9E" },
+  rtsWarningText: { color: "#dc2626", fontWeight: "600", fontSize: 13 },
+
+  // Loading / success
+  loadingBox: { alignItems: "center", paddingVertical: 20, gap: 8 },
+  loadingText: { color: "#64748b", fontSize: 13, fontWeight: "500" },
+  successBox: { alignItems: "center", paddingVertical: 20, gap: 10 },
+  successBoxText: { color: "#22c55e", fontSize: 15, fontWeight: "700" },
+
+  // Close button
+  closeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    marginTop: 4,
+  },
+  closeBtnText: { color: "#64748b", fontWeight: "600", fontSize: 14 },
+
+  // Camera drawer
+  cameraDrawerContent: { paddingHorizontal: 16, paddingBottom: 24 },
+  cameraDrawerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 12,
+  },
+  cameraDrawerTitle: { fontSize: 15, fontWeight: "700", color: "#1e293b" },
   camera: {
     width: "100%",
-    height: 400,
-    borderRadius: 10,
+    height: 380,
+    borderRadius: 16,
     backgroundColor: "#000",
   },
-  // ✅ new overlay style
   imageLoadingOverlay: {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.65)",
+    backgroundColor: "rgba(0,0,0,0.65)",
     justifyContent: "center",
     alignItems: "center",
-    borderRadius: 10,
+    borderRadius: 16,
     gap: 12,
   },
-  imageLoadingText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 16,
-  },
+  imageLoadingText: { color: "#fff", fontWeight: "700", fontSize: 16 },
   coordContainer: {
     position: "absolute",
-    top: 300,
-    left: 20,
-    backgroundColor: "rgba(0, 0, 0, 0.34)",
-    padding: 5,
-    borderRadius: 10,
+    bottom: 12,
+    left: 12,
+    backgroundColor: "rgba(0,0,0,0.42)",
+    padding: 8,
+    borderRadius: 12,
     flexDirection: "row",
     gap: 10,
     alignItems: "flex-end",
   },
-  coordText: { color: "#fff", fontWeight: "bold" },
-  bottom: {
-    position: "absolute",
-    bottom: 40,
-    width: "100%",
-    alignItems: "center",
-  },
-  message: { textAlign: "center", paddingBottom: 10 },
-  buttonContainer: {
-    position: "absolute",
-    bottom: 64,
-    flexDirection: "row",
-    backgroundColor: "transparent",
-    width: "100%",
-    paddingHorizontal: 64,
-  },
-  text: { fontSize: 24, fontWeight: "bold", color: "white" },
-  content: { marginTop: 40, justifyContent: "center", alignItems: "center" },
-  description: {
-    fontSize: 16,
-    textAlign: "center",
-    marginTop: 20,
-    opacity: 0.8,
-  },
-  errorBg: { backgroundColor: "#fee", borderColor: "#fcc" },
-  successBg: { backgroundColor: "#d4edda", borderColor: "#c3e6cb" },
-  errorColor: { color: "#e74c3c" },
-  successColor: { color: "#27ae60" },
-  containerTwo: {
-    backgroundColor: "#fff",
-    height: 500,
-  },
-  card: {
-    padding: 16,
+  coordMapThumb: {
+    height: 70,
+    width: 70,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    marginBottom: 16,
-    flexDirection: "column",
-    gap: 10,
+    overflow: "hidden",
   },
-  boldText: { fontWeight: "bold", fontSize: 16, marginBottom: 4 },
-  divider: { height: 1, backgroundColor: "#e5e7eb", marginVertical: 10 },
-  verticalDivider: {
-    width: 1,
-    height: 14,
-    backgroundColor: "#e5e7eb",
-    marginHorizontal: 8,
-  },
-  row: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
-  center: { alignItems: "center", marginVertical: 20 },
-  button: {
-    paddingVertical: 12,
-    borderRadius: 8,
+  coordTimestamp: { fontSize: 10, color: "#fff", marginBottom: 2 },
+  coordText: { color: "#fff", fontWeight: "600", fontSize: 11 },
+  cameraActions: { flexDirection: "column", gap: 10, marginTop: 12 },
+
+  // Return drawer
+  returnHeader: {
+    flexDirection: "row",
     alignItems: "center",
-    marginVertical: 6,
+    gap: 8,
+    marginBottom: 12,
   },
-  warningButton: { backgroundColor: "#f59e0b" },
-  successText: { fontSize: 32, marginBottom: 8 },
-  label: { fontSize: 16, fontWeight: "600", marginBottom: 8 },
+  returnTitle: { fontSize: 16, fontWeight: "700", color: "#1e293b" },
   textArea: {
     height: 120,
     borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
+    borderColor: "#e2e8f0",
+    borderRadius: 12,
     padding: 12,
     fontSize: 14,
+    color: "#1e293b",
     marginBottom: 16,
+    backgroundColor: "#f8fafc",
   },
+  attemptsError: {
+    padding: 10,
+    marginBottom: 10,
+    backgroundColor: "#fef2f2",
+    borderRadius: 10,
+  },
+  attemptsErrorText: { color: "#dc2626", fontWeight: "600" },
+
+  // Misc
+  message: { textAlign: "center", paddingBottom: 10 },
   scanCountCard: {
     backgroundColor: "#fff",
     paddingVertical: 10,

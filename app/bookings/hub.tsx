@@ -2,10 +2,11 @@ import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { useScannerSounds } from "@/components/ScannerSounds";
 import { useAppSelector } from "@/store/hooks";
 import axiosInstance from "@/utils/axiosInstance";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
+import { ArrowLeft, MapPin, ScanLine } from "lucide-react-native";
 import moment from "moment";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -46,7 +47,7 @@ export default function HubScreen() {
   const [remittanceCheckerData, setRemittanceCheckerData] =
     useState<boolean>(false);
   const [remittanceLoading, setRemittanceLoading] = useState<boolean>(false);
-  const [scanCount, setScanCount] = useState(0);
+  const [, setScanCount] = useState(0);
 
   // Intercept Android back button and always return to Home
   useFocusEffect(
@@ -67,7 +68,6 @@ export default function HubScreen() {
 
   const onScan = async (scannedCode: any) => {
     if (scanned) return;
-    console.log("scanned : >> ", scanned);
     setScanResultMessage("");
     setScanned(true);
     setData(scannedCode);
@@ -125,7 +125,6 @@ export default function HubScreen() {
             setScanCount((prev) => prev + 1);
             setScanned(false);
           } else {
-            console.log("NATAWAG? ");
             setScanResultMessage(
               orderDetail.data.waybillStatus
                 ? `INVALID \n Item Status : ${orderDetail.data.waybillStatus}`
@@ -139,10 +138,11 @@ export default function HubScreen() {
           setLoadingScan(false);
         } catch (error: any) {
           setLoadingScan(false);
-          console.log("RIDER HUB SCANNING ERROR:", error);
           playError();
           setAlertColor("red");
-          setScanResultMessage(`INVALID ${error}`);
+          setScanResultMessage(
+            `INVALID: ${error?.response?.data?.message ?? "Scan failed"}`,
+          );
           setScanned(false);
         } finally {
           setLoadingScan(false);
@@ -166,7 +166,7 @@ export default function HubScreen() {
     if (userData !== null) {
       processScan();
     }
-  }, [data, userData]);
+  }, [data, userData, playError, playSuccess, playWarning, scannedData]);
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -180,7 +180,6 @@ export default function HubScreen() {
       } catch (error) {
         console.error("Error loading user data:", error);
       } finally {
-        console.log("SUCCESS");
       }
     };
 
@@ -219,8 +218,6 @@ export default function HubScreen() {
     }
   }, [userData]);
 
-  console.log("remittanceCheckerData : >> ", remittanceCheckerData);
-
   const colors = ALERT_COLORS[alertColor] ?? ALERT_COLORS.blue;
 
   return (
@@ -231,13 +228,15 @@ export default function HubScreen() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Ionicons name="arrow-back" size={22} color="#1F2937" />
+          <ArrowLeft size={20} color="#22c55e" strokeWidth={2.5} />
         </TouchableOpacity>
         <View style={styles.headerTextContainer}>
           <Text style={styles.title}>Hub Scanner</Text>
           <Text style={styles.subtitle}>Pickup orders from hub</Text>
         </View>
-        <View style={{ width: 40 }} />
+        <View style={styles.scanIconBadge}>
+          <ScanLine size={22} color="#22c55e" strokeWidth={2} />
+        </View>
       </View>
 
       {remittanceLoading ? (
@@ -262,81 +261,50 @@ export default function HubScreen() {
         </View>
       ) : (
         <>
-          <BarcodeScanner onScan={onScan} scanned={scanned} />
-
-          {/* SCAN COUNT */}
-          <View style={styles.scanCountContainer}>
-            <View style={styles.scanCountCard}>
-              <Text style={styles.scanCountNumber}>{scanCount}</Text>
-              <Text style={styles.scanCountLabel}>
-                {scanCount === 1 ? "Item Scanned" : "Items Scanned"}
-              </Text>
-            </View>
-          </View>
-
-          {/* SCANNING STATUS */}
-          <View style={styles.statusContainer}>
-            <View
-              style={[
-                styles.statusIndicator,
-                {
-                  backgroundColor: loadingScan
-                    ? "#f59e0b"
-                    : scanned
-                      ? "#ef4444"
-                      : "#22c55e",
-                },
-              ]}
+          <View style={{ flex: 1 }}>
+            <BarcodeScanner
+              onScan={onScan}
+              scanned={scanned}
+              isProcessing={loadingScan}
             />
-            <Text style={styles.statusText}>
-              {loadingScan
-                ? "Processing..."
-                : scanned
-                  ? "Camera Locked"
-                  : "Ready to Scan"}
-            </Text>
           </View>
-
-          {/* SCAN RESULT ALERT */}
-          {data && (
-            <View
-              style={[
-                styles.resultAlert,
-                { borderColor: colors.border, backgroundColor: colors.bg },
-              ]}
-            >
-              {loadingScan ? (
-                <Text style={[styles.resultText, { color: colors.text }]}>
-                  Scanning...
-                </Text>
-              ) : (
-                <Text style={[styles.resultText, { color: colors.text }]}>
+          <View style={styles.bottomBar}>
+            {scanResultMessage !== "" && (
+              <View
+                style={[
+                  styles.resultAlert,
+                  alertColor === "green"
+                    ? styles.resultAlertGreen
+                    : alertColor === "orange"
+                      ? styles.resultAlertOrange
+                      : styles.resultAlertRed,
+                ]}
+              >
+                <View
+                  style={[styles.resultDot, { backgroundColor: colors.border }]}
+                />
+                <Text style={[styles.resultText, { color: colors.border }]}>
                   {scanResultMessage}
                 </Text>
-              )}
-            </View>
-          )}
+              </View>
+            )}
 
-          {/* BARANGAY DESTINATION CARD */}
-          {barangayDestination !== "" && (
-            <View style={styles.destinationCard}>
-              <View style={styles.destinationIconContainer}>
-                <MaterialCommunityIcons
-                  name="map-marker-radius"
-                  size={22}
-                  color="#22c55e"
-                />
+            {barangayDestination !== "" && (
+              <View style={styles.destinationCard}>
+                <View style={styles.destinationIconContainer}>
+                  <MapPin size={20} color="#22c55e" strokeWidth={2} />
+                </View>
+                <View>
+                  <Text style={styles.destinationLabel}>
+                    Barangay Destination
+                  </Text>
+                  <Text style={styles.destinationValue}>
+                    {barangayDestination}
+                  </Text>
+                </View>
               </View>
-              <View>
-                <Text style={styles.destinationLabel}>
-                  Barangay Destination
-                </Text>
-                <Text style={styles.destinationValue}>
-                  {barangayDestination}
-                </Text>
-              </View>
-            </View>
-          )}
+            )}
+          </View>
         </>
       )}
     </SafeAreaView>
@@ -346,58 +314,56 @@ export default function HubScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#fff",
+  },
+  bottomBar: {
+    backgroundColor: "#fff",
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 12,
+    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#f0f0f0",
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: "#fff",
-  },
-  headerTextContainer: {
-    flex: 1,
-    marginBottom: 20,
+    paddingTop: 10,
+    paddingBottom: 14,
+    backgroundColor: "#5a8a1a",
+    borderBottomWidth: 1,
+    borderBottomColor: "#4a7a14",
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
     borderRadius: 12,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: "rgba(255,255,255,0.15)",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 10,
+    marginRight: 12,
   },
   headerTextContainer: {
     flex: 1,
   },
+  scanIconBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
   title: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "700",
-    color: "#0F172A",
+    color: "#fff",
   },
   subtitle: {
     fontSize: 12,
-    color: "#94A3B8",
-    marginTop: 1,
-  },
-  countBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: "#00BF6315",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  countText: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#00BF63",
-  },
-  scanCountContainer: {
-    alignItems: "center",
-    marginTop: 12,
-    marginBottom: 4,
+    color: "rgba(255,255,255,0.7)",
+    marginTop: 2,
   },
   scanCountCard: {
     backgroundColor: "#fff",
@@ -424,41 +390,23 @@ const styles = StyleSheet.create({
     color: "#64748B",
     marginTop: 2,
   },
-  statusContainer: {
+  resultAlert: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    gap: 8,
     paddingVertical: 10,
-    paddingHorizontal: 20,
-    marginTop: 10,
-    marginHorizontal: 40,
+    paddingHorizontal: 14,
     borderRadius: 12,
-    backgroundColor: "#F0FDF4",
+    borderWidth: 1,
   },
-  statusIndicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 8,
-  },
-  statusText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#15803D",
-  },
-  resultAlert: {
-    marginTop: 12,
-    marginHorizontal: 16,
-    padding: 16,
-    borderRadius: 14,
-    borderWidth: 2,
-    alignItems: "center",
-  },
+  resultAlertGreen: { backgroundColor: "#f0fdf4", borderColor: "#bbf7d0" },
+  resultAlertRed: { backgroundColor: "#fef2f2", borderColor: "#fecaca" },
+  resultAlertOrange: { backgroundColor: "#fff7ed", borderColor: "#fed7aa" },
+  resultDot: { width: 8, height: 8, borderRadius: 4 },
   resultText: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "600",
-    textAlign: "center",
-    color: "#ffffff",
+    flex: 1,
   },
   destinationCard: {
     flexDirection: "row",

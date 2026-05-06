@@ -12,9 +12,13 @@ import messaging, {
 } from "@react-native-firebase/messaging";
 import { Stack } from "expo-router";
 import { useEffect, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { LogBox, StyleSheet, Text, View } from "react-native";
 import { Provider } from "react-redux";
 import "../firebase";
+
+// expo-camera internally calls useKeepAwake() which can fail on some Android
+// devices/configurations. This is non-fatal and safe to suppress.
+LogBox.ignoreLogs(["Unable to activate keep awake"]);
 
 async function showNotification(title: string, body: string) {
   const channelId = await notifee.createChannel({

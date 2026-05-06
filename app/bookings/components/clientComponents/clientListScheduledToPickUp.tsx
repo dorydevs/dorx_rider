@@ -18,6 +18,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import { MapPin } from "lucide-react-native";
 
 type ClientData = any;
 
@@ -274,41 +275,33 @@ export default function clientScheduledToPickUp() {
 
   return (
     <View style={styles.container}>
-      <View
-        style={{ flexDirection: "row", alignItems: "center", paddingTop: 25 }}
-      >
+      {/* ── HEADER ── */}
+      <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <FontAwesome name="chevron-left" size={24} color="#22c55e" />
+          <FontAwesome name="chevron-left" size={18} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.title}>Client Scheduled to Pick up</Text>
-      </View>
-
-      <View>
-        <View style={styles.clientCard}>
-          <View>
-            <Text style={{ fontSize: 18, color: "white", fontWeight: "bold" }}>
-              Client
-            </Text>
-            <Text style={{ fontSize: 16, color: "white" }}>
-              {client.clientName}
-            </Text>
-            <Text style={{ fontSize: 13, opacity: 0.5, color: "white" }}>
-              {client.address}
-            </Text>
-          </View>
-          {/* <View style={{ padding: 20 }}>
-            <Text style={{ fontSize: 30, color: "white", marginBottom: -15 }}>
-              {client.total}
-            </Text>
-          </View> */}
+        <View style={styles.headerTextContainer}>
+          <Text style={styles.title}>Client Scheduled to Pick up</Text>
         </View>
       </View>
 
-      <View style={{ marginTop: 10 }}>
-        <Text style={{ fontWeight: "bold" }}>Scheduled</Text>
+      {/* ── CLIENT BANNER ── */}
+      <View style={styles.bannerCard}>
+        <View style={styles.bannerIconWrap}>
+          <MapPin size={20} color="#5a8a1a" strokeWidth={2.5} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.bannerLabel}>Client</Text>
+          <Text style={styles.bannerName}>{client.clientName}</Text>
+          <Text style={styles.bannerAddress}>{client.address}</Text>
+        </View>
+      </View>
+
+      <View style={styles.sectionLabelRow}>
+        <Text style={styles.sectionLabel}>Schedules</Text>
       </View>
 
       {loading ? (
@@ -322,8 +315,8 @@ export default function clientScheduledToPickUp() {
             String(item?.id ?? item?.ClientDataId ?? idx)
           }
           renderItem={renderItem}
-          contentContainerStyle={{ paddingVertical: 16 }}
-          ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+          contentContainerStyle={{ paddingTop: 8, paddingBottom: 32 }}
+          ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
         />
       )}
     </View>
@@ -331,22 +324,93 @@ export default function clientScheduledToPickUp() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 15 },
-  clientCard: {
-    padding: 20,
-    marginTop: 20,
-    borderRadius: 12,
-    backgroundColor: "#22c55e",
-    elevation: 2,
+  container: { flex: 1, backgroundColor: "#f1f5f9" },
+
+  // Header
+  header: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
+    alignItems: "center",
+    paddingTop: 54,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+    backgroundColor: "#5a8a1a",
+    borderBottomWidth: 1,
+    borderBottomColor: "#4a7a14",
   },
-  card: {
+  backButton: {
+    width: 38,
+    height: 38,
     borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10,
+  },
+  headerTextContainer: { flex: 1 },
+  title: { fontSize: 18, fontWeight: "700", color: "#fff" },
+
+  // Banner
+  bannerCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    margin: 16,
+    marginBottom: 8,
+    padding: 18,
+    borderRadius: 16,
+    backgroundColor: "#fff",
+    borderLeftWidth: 4,
+    borderLeftColor: "#5a8a1a",
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  bannerIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: "#f0fdf4",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  bannerLabel: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#94a3b8",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    marginBottom: 2,
+  },
+  bannerName: { fontSize: 16, fontWeight: "700", color: "#0f172a" },
+  bannerAddress: { fontSize: 12, color: "#64748b", marginTop: 2 },
+
+  // Section label
+  sectionLabelRow: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 6,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#64748b",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+
+  // Schedule card
+  card: {
+    borderRadius: 16,
     backgroundColor: "#ffffff",
+    marginHorizontal: 16,
     elevation: 2,
     overflow: "hidden",
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
   },
   cardTop: {
     flexDirection: "row",
@@ -393,6 +457,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: -10,
   },
-  title: { fontSize: 15, fontWeight: "bold", color: "#22c55e" },
   subtitle: { fontSize: 16, opacity: 0.7, marginBottom: 30 },
 });

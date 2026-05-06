@@ -1,6 +1,7 @@
 import { useAppSelector } from "@/store/hooks";
 import axiosInstance from "@/utils/axiosInstance";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { MapPin } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useIsFocused } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -70,22 +71,24 @@ export default function ClientScreen() {
   const renderItem = ({ item }: { item: ClientData }) => {
     return (
       <TouchableOpacity
-        style={[styles.card, { width: Math.min(760, width - 40) }]}
+        style={styles.card}
         onPress={() => handlePress(item)}
         activeOpacity={0.75}
       >
-        <View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 16 }}>{item.clientName}</Text>
-            <Text style={{ opacity: 0.5, fontSize: 13 }} numberOfLines={2}>
-              {item.address}
-            </Text>
-          </View>
-          <View>
-            <Text style={{ opacity: 0.5, fontSize: 13 }}>
-              Total {client.total === 1 ? "Item" : "Items"}: {client.total}
-            </Text>
-          </View>
+        <View style={styles.cardIconWrap}>
+          <MapPin size={22} color="#5a8a1a" strokeWidth={2.5} />
+        </View>
+        <View style={styles.cardBody}>
+          <Text style={styles.cardTitle}>{item.clientName}</Text>
+          <Text style={styles.cardAddress} numberOfLines={2}>
+            {item.address}
+          </Text>
+          <Text style={styles.cardTotal}>
+            {client.total} {client.total === 1 ? "Item" : "Items"} to pick up
+          </Text>
+        </View>
+        <View style={styles.cardChevron}>
+          <FontAwesome name="chevron-right" size={14} color="#5a8a1a" />
         </View>
       </TouchableOpacity>
     );
@@ -112,49 +115,16 @@ export default function ClientScreen() {
 
   return (
     <View style={styles.container}>
-      <View
-        style={{ flexDirection: "row", alignItems: "center", paddingTop: 25 }}
-      >
+      {/* ── HEADER ── */}
+      <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <FontAwesome name="chevron-left" size={24} color="#22c55e" />
+          <FontAwesome name="chevron-left" size={18} color="#fff" />
         </TouchableOpacity>
-
-        <Text style={styles.title}>Client Pick Up Addresses</Text>
-      </View>
-
-      <View>
-        <View
-          style={{
-            padding: 20,
-            marginTop: 20,
-            borderRadius: 12,
-            backgroundColor: "#22c55e",
-            elevation: 2,
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "flex-end",
-          }}
-        >
-          <View>
-            <Text style={{ fontSize: 18, color: "white", fontWeight: "bold" }}>
-              Client
-            </Text>
-            <Text style={{ fontSize: 16, color: "white" }}>
-              {client.clientName}
-            </Text>
-            <Text style={{ fontSize: 13, opacity: 0.5, color: "white" }}>
-              {client.address}
-            </Text>
-          </View>
-
-          {/* <View style={{ padding: 20 }}>
-            <Text style={{ fontSize: 30, color: "white", marginBottom: -15 }}>
-              {client.total}
-            </Text>
-          </View> */}
+        <View style={styles.headerTextContainer}>
+          <Text style={styles.title}>Client Pick Up Addresses</Text>
         </View>
       </View>
 
@@ -175,8 +145,8 @@ export default function ClientScreen() {
             String(item?.id ?? item?.ClientDataId ?? idx)
           }
           renderItem={renderItem}
-          contentContainerStyle={{ paddingVertical: 16 }}
-          ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+          contentContainerStyle={styles.listContent}
+          ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
         />
       )}
     </View>
@@ -186,28 +156,80 @@ export default function ClientScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 15,
+    backgroundColor: "#f1f5f9",
   },
-  card: {
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: "#ffffff",
+  header: {
     flexDirection: "row",
     alignItems: "center",
-    elevation: 2,
+    paddingTop: 54,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+    backgroundColor: "#5a8a1a",
+    borderBottomWidth: 1,
+    borderBottomColor: "#4a7a14",
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.15)",
     justifyContent: "center",
-    marginRight: -10,
+    alignItems: "center",
+    marginRight: 10,
   },
+  headerTextContainer: { flex: 1 },
   title: {
-    fontSize: 15,
-    fontWeight: "bold",
-
-    color: "#22c55e",
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#fff",
   },
+  card: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 20,
+    borderRadius: 18,
+    backgroundColor: "#ffffff",
+    gap: 16,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    borderLeftWidth: 5,
+    borderLeftColor: "#5a8a1a",
+  },
+  cardIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 15,
+    backgroundColor: "#f0fdf4",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  cardBody: { flex: 1, gap: 4 },
+  cardTitle: { fontSize: 17, fontWeight: "800", color: "#0f172a" },
+  cardAddress: { fontSize: 13, color: "#64748b", lineHeight: 18 },
+  cardTotal: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#5a8a1a",
+    marginTop: 4,
+    backgroundColor: "#f0fdf4",
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 20,
+    overflow: "hidden",
+  },
+  cardChevron: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: "#f0fdf4",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  listContent: { padding: 16, paddingBottom: 32 },
   subtitle: {
     fontSize: 16,
     opacity: 0.7,

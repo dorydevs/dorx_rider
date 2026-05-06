@@ -207,145 +207,92 @@ export default function RtsFromHub() {
         <View style={{ width: 40 }} />
       </View>
 
-      <BarcodeScanner onScan={onScan} scanned={scanned} />
-
-      {/* SCAN COUNT */}
-      <View style={styles.scanCountContainer}>
-        <View style={styles.scanCountCard}>
-          <Text style={styles.scanCountNumber}>{scanCount}</Text>
-          <Text style={styles.scanCountLabel}>
-            {scanCount === 1 ? "Item Scanned" : "Items Scanned"}
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.statusContainer}>
-        <View
-          style={[
-            styles.statusIndicator,
-            { backgroundColor: scanned ? "#ef4444" : "#22c55e" },
-          ]}
+      <View style={{ flex: 1 }}>
+        <BarcodeScanner
+          onScan={onScan}
+          scanned={scanned}
+          isProcessing={loadingScan}
         />
-        <Text style={styles.statusText}>
-          {loadingScan
-            ? "Processing..."
-            : scanned
-              ? "Camera Locked"
-              : "Ready to Scan"}
-        </Text>
       </View>
-
-      {scanResultMessage !== "" && (
-        <View
-          style={[
-            styles.resultContainer,
-            alertColor === "green"
-              ? styles.successBg
-              : alertColor === "yellow"
-                ? styles.warningBg
-                : styles.errorBg,
-          ]}
-        >
-          <Ionicons
-            name={
-              alertColor === "green"
-                ? "checkmark-circle"
-                : alertColor === "yellow"
-                  ? "warning"
-                  : "close-circle"
-            }
-            size={24}
-            color={
-              alertColor === "green"
-                ? "#22c55e"
-                : alertColor === "yellow"
-                  ? "#f39c12"
-                  : "#e74c3c"
-            }
-          />
-          <Text
+      <View style={styles.bottomBar}>
+        {scanResultMessage !== "" && (
+          <View
             style={[
-              styles.resultText,
+              styles.resultContainer,
               alertColor === "green"
-                ? styles.successColor
+                ? styles.successBg
                 : alertColor === "yellow"
-                  ? styles.warningColor
-                  : styles.errorColor,
+                  ? styles.warningBg
+                  : styles.errorBg,
             ]}
           >
-            {scanResultMessage}
-          </Text>
-        </View>
-      )}
+            <Ionicons
+              name={
+                alertColor === "green"
+                  ? "checkmark-circle"
+                  : alertColor === "yellow"
+                    ? "warning"
+                    : "close-circle"
+              }
+              size={20}
+              color={
+                alertColor === "green"
+                  ? "#22c55e"
+                  : alertColor === "yellow"
+                    ? "#f39c12"
+                    : "#e74c3c"
+              }
+            />
+            <Text
+              style={[
+                styles.resultText,
+                alertColor === "green"
+                  ? styles.successColor
+                  : alertColor === "yellow"
+                    ? styles.warningColor
+                    : styles.errorColor,
+              ]}
+            >
+              {scanResultMessage}
+            </Text>
+          </View>
+        )}
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  container: { flex: 1, backgroundColor: "#fff" },
+  bottomBar: {
+    backgroundColor: "#fff",
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 12,
+    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#f0f0f0",
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingTop: 10,
     paddingBottom: 16,
     paddingHorizontal: 20,
-    backgroundColor: "#fff",
+    backgroundColor: "#5a8a1a",
   },
   headerTextContainer: { flex: 1 },
   backButton: {
     width: 40,
     height: 40,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.15)",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 8,
   },
-  title: { fontSize: 22, fontWeight: "700", color: "#2c3e50" },
-  subtitle: { fontSize: 13, color: "#7f8c8d", marginTop: 2 },
-  scannerContainer: {
-    flex: 1,
-    margin: 20,
-    borderRadius: 16,
-    overflow: "hidden",
-  },
-  statusContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 12,
-    marginHorizontal: 20,
-    marginBottom: 12,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-  },
-  statusIndicator: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },
-  statusText: { fontSize: 14, fontWeight: "600", color: "#2c3e50" },
-  resultContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginHorizontal: 20,
-    marginBottom: 12,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  errorBg: { backgroundColor: "#fee2e2", borderColor: "#ef4444" },
-  successBg: { backgroundColor: "#d1fae5", borderColor: "#22c55e" },
-  warningBg: { backgroundColor: "#fef3c7", borderColor: "#f59e0b" },
-  resultText: { flex: 1, fontSize: 14, fontWeight: "600", lineHeight: 20 },
-  errorColor: { color: "#dc2626" },
-  successColor: { color: "#16a34a" },
-  warningColor: { color: "#d97706" },
-  scanCountContainer: {
-    alignItems: "center",
-    marginTop: 12,
-    marginBottom: 4,
-  },
+  title: { fontSize: 20, fontWeight: "700", color: "#fff" },
+  subtitle: { fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 2 },
   scanCountCard: {
     backgroundColor: "#fff",
     paddingVertical: 10,
@@ -360,15 +307,26 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  scanCountNumber: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: "#22c55e",
-  },
+  scanCountNumber: { fontSize: 28, fontWeight: "800", color: "#22c55e" },
   scanCountLabel: {
     fontSize: 12,
     fontWeight: "500",
     color: "#64748B",
     marginTop: 2,
   },
+  resultContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1.5,
+  },
+  errorBg: { backgroundColor: "#fee2e2", borderColor: "#ef4444" },
+  successBg: { backgroundColor: "#d1fae5", borderColor: "#22c55e" },
+  warningBg: { backgroundColor: "#fef3c7", borderColor: "#f59e0b" },
+  resultText: { flex: 1, fontSize: 14, fontWeight: "600", lineHeight: 20 },
+  errorColor: { color: "#dc2626" },
+  successColor: { color: "#16a34a" },
+  warningColor: { color: "#d97706" },
 });
