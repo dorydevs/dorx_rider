@@ -10,11 +10,13 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import moment from "moment";
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 import {
   ActivityIndicator,
+  Animated,
   Dimensions,
+  Easing,
   Image,
   Keyboard,
   ScrollView,
@@ -28,7 +30,11 @@ import BottomDrawer from "react-native-animated-bottom-drawer";
 import MapView, { Marker } from "react-native-maps";
 import { Button } from "react-native-paper";
 import ViewShot, { captureRef } from "react-native-view-shot";
-const { width: any } = Dimensions.get("window");
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const FRAME_SIZE = SCREEN_WIDTH * 0.65;
+const CORNER_LEN = 32;
+const CORNER_W = 4;
+const CORNER_R = 8;
 export default function CustomersScreen() {
   const router = useRouter();
   const viewShotRef = useRef(null);
@@ -54,7 +60,7 @@ export default function CustomersScreen() {
   const [attemptsLoading, setAttemptsLoading] = useState(false);
   const [attempts, setAttempts] = useState<any>("");
   const [attemptsMessage, setAttemptsMessage] = useState<any>("");
-  const [attemptReached, setAttemptReached] = useState<Boolean>(false);
+  const [attemptReached, setAttemptReached] = useState<boolean>(false);
   const [previewReady, setPreviewReady] = useState(false);
   const [orderNumber, setOrderNumber] = useState<any>("");
   const [permission, requestPermission] = useCameraPermissions();
@@ -78,6 +84,8 @@ export default function CustomersScreen() {
   console.log(">>>> ", showReturn);
 
   const bottomDrawerForReturnref = useRef<any>(null);
+  const scanLineAnim = useRef(new Animated.Value(0)).current;
+  const glowAnim = useRef(new Animated.Value(0.4)).current;
 
   const openCameraDrawer = () => {
     setShowScanner(false); // Unmount scanner first
@@ -94,6 +102,40 @@ export default function CustomersScreen() {
       setShowScanner(true); // Re-mount scanner after drawer closes
     }, 300);
   };
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(scanLineAnim, {
+          toValue: 1,
+          duration: 1800,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(scanLineAnim, {
+          toValue: 0,
+          duration: 1800,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]),
+    ).start();
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(glowAnim, {
+          toValue: 0.4,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ]),
+    ).start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const handleAttempChecker = async () => {
@@ -114,10 +156,10 @@ export default function CustomersScreen() {
       }
       setAttemptsLoading(false);
     };
-    if (waybillDetails.length !== 0) {
+    if (userData && waybillDetails.length !== 0) {
       handleAttempChecker();
     }
-  }, [waybillDetails]);
+  }, [waybillDetails, userData]);
 
   const onSave = async () => {
     if (reason !== "") {
@@ -460,7 +502,12 @@ export default function CustomersScreen() {
 
     // Add your API or dispatch logic here
   };
-  const newLocal = "green";
+  const scanLineY = scanLineAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, FRAME_SIZE - 2],
+  });
+  const isLocked = scanned && !loadingScan;
+  const cornerColor = isLocked ? "#ef4444" : "#22c55e";
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -468,7 +515,7 @@ export default function CustomersScreen() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Ionicons name="chevron-back" size={24} color="#3498db" />
+          <Ionicons name="chevron-back" size={22} color="#22c55e" />
         </TouchableOpacity>
         <View style={styles.headerTextContainer}>
           <Text style={styles.title}>Customer Delivery</Text>
@@ -476,43 +523,129 @@ export default function CustomersScreen() {
         </View>
       </View>
 
-      <View style={styles.scannerContainer}>
+      <View style={styles.cameraContainer}>
         {showScanner && (
           <BarcodeScanner
             key="background-scanner"
             onScan={onScan}
             scanned={scanned}
+            containerStyle={styles.cameraFill}
           />
         )}
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          <View style={styles.dimTop} />
+          <View style={styles.dimMiddleRow}>
+            <View style={styles.dimSide} />
+            <View
+              style={[
+                styles.frameContainer,
+                { width: FRAME_SIZE, height: FRAME_SIZE },
+              ]}
+            >
+              <Animated.View
+                style={[
+                  styles.corner,
+                  styles.cTL,
+                  { borderColor: cornerColor, opacity: glowAnim },
+                ]}
+              />
+              <Animated.View
+                style={[
+                  styles.corner,
+                  styles.cTR,
+                  { borderColor: cornerColor, opacity: glowAnim },
+                ]}
+              />
+              <Animated.View
+                style={[
+                  styles.corner,
+                  styles.cBL,
+                  { borderColor: cornerColor, opacity: glowAnim },
+                ]}
+              />
+              <Animated.View
+                style={[
+                  styles.corner,
+                  styles.cBR,
+                  { borderColor: cornerColor, opacity: glowAnim },
+                ]}
+              />
+              {!isLocked && (
+                <Animated.View
+                  style={[
+                    styles.scanLine,
+                    { transform: [{ translateY: scanLineY }] },
+                  ]}
+                />
+              )}
+              {isLocked && (
+                <View style={styles.lockedOverlay}>
+                  <View style={styles.lockedBadge}>
+                    <Ionicons name="lock-closed" size={20} color="#fff" />
+                    <Text style={styles.lockedText}>Locked</Text>
+                  </View>
+                </View>
+              )}
+              {loadingScan && (
+                <View style={styles.lockedOverlay}>
+                  <View
+                    style={[
+                      styles.lockedBadge,
+                      { backgroundColor: "rgba(34,197,94,0.85)" },
+                    ]}
+                  >
+                    <Ionicons name="sync" size={20} color="#fff" />
+                    <Text style={styles.lockedText}>Processing…</Text>
+                  </View>
+                </View>
+              )}
+            </View>
+            <View style={styles.dimSide} />
+          </View>
+          <View style={styles.dimBottom}>
+            <View style={styles.hintRow}>
+              <Ionicons name="scan-outline" size={16} color="#a3e635" />
+              <Text style={styles.hintText}>
+                {loadingScan
+                  ? "Fetching details…"
+                  : isLocked
+                    ? "Camera locked"
+                    : "Place barcode inside the frame"}
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.pill,
+                { backgroundColor: isLocked ? "#ef4444" : "#22c55e" },
+              ]}
+            >
+              <View style={styles.pillDot} />
+              <Text style={styles.pillText}>
+                {loadingScan
+                  ? "Processing"
+                  : isLocked
+                    ? "Locked"
+                    : "Ready to Scan"}
+              </Text>
+            </View>
+            <Text style={styles.tipText}>
+              Hold steady — auto-detects on focus
+            </Text>
+          </View>
+        </View>
       </View>
 
-      <View style={styles.statusContainer}>
+      {!!scanResultMessage && (
         <View
           style={[
-            styles.statusIndicator,
-            { backgroundColor: scanned ? "#ef4444" : "#22c55e" },
-          ]}
-        />
-        <Text style={styles.statusText}>
-          {loadingScan
-            ? "Processing..."
-            : scanned
-              ? "Camera Locked"
-              : "Ready to Scan"}
-        </Text>
-      </View>
-
-      {scanResultMessage && (
-        <View
-          style={[
-            styles.resultContainer,
-            invalid ? styles.errorBg : styles.successBg,
+            styles.resultBanner,
+            invalid ? styles.resultError : styles.resultSuccess,
           ]}
         >
           <Ionicons
             name={invalid ? "close-circle" : "checkmark-circle"}
             size={20}
-            color={invalid ? "#e74c3c" : "#27ae60"}
+            color={invalid ? "#ef4444" : "#22c55e"}
           />
           <Text
             style={[
@@ -696,7 +829,7 @@ export default function CustomersScreen() {
               <View collapsable={false}>
                 <Image
                   onLoadEnd={() => setPreviewReady(true)}
-                  source={{ uri: photoUri || '' }}
+                  source={{ uri: photoUri || "" }}
                   style={styles.camera}
                 />
 
@@ -870,53 +1003,144 @@ export default function CustomersScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f5f7fa" },
+  container: { flex: 1, backgroundColor: "#0a0a0a" },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: 50,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
+    gap: 12,
+    paddingTop: 54,
+    paddingBottom: 14,
+    paddingHorizontal: 16,
     backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
   },
   headerTextContainer: { flex: 1 },
   backButton: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: "#f0fdf4",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 8,
   },
-  title: { fontSize: 22, fontWeight: "700", color: "#2c3e50" },
-  subtitle: { fontSize: 13, color: "#7f8c8d", marginTop: 2 },
-  scannerContainer: { flex: 1, margin: 20, borderRadius: 16, overflow: "hidden" },
-  statusContainer: {
+  title: { fontSize: 18, fontWeight: "700", color: "#1e293b" },
+  subtitle: { fontSize: 12, color: "#94a3b8", marginTop: 1 },
+  cameraContainer: { flex: 1, position: "relative", backgroundColor: "#000" },
+  cameraFill: {
+    flex: 1,
+    margin: 0,
+    marginTop: 0,
+    marginHorizontal: 0,
+    height: undefined,
+    borderRadius: 0,
+  },
+  dimTop: { backgroundColor: "rgba(0,0,0,0.72)", flex: 1 },
+  dimMiddleRow: { flexDirection: "row" },
+  dimSide: { flex: 1, backgroundColor: "rgba(0,0,0,0.72)" },
+  dimBottom: {
+    backgroundColor: "rgba(0,0,0,0.72)",
+    flex: 1.3,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 14,
+    paddingBottom: 16,
+  },
+  frameContainer: { position: "relative" },
+  corner: { position: "absolute", width: CORNER_LEN, height: CORNER_LEN },
+  cTL: {
+    top: 0,
+    left: 0,
+    borderTopWidth: CORNER_W,
+    borderLeftWidth: CORNER_W,
+    borderTopLeftRadius: CORNER_R,
+  },
+  cTR: {
+    top: 0,
+    right: 0,
+    borderTopWidth: CORNER_W,
+    borderRightWidth: CORNER_W,
+    borderTopRightRadius: CORNER_R,
+  },
+  cBL: {
+    bottom: 0,
+    left: 0,
+    borderBottomWidth: CORNER_W,
+    borderLeftWidth: CORNER_W,
+    borderBottomLeftRadius: CORNER_R,
+  },
+  cBR: {
+    bottom: 0,
+    right: 0,
+    borderBottomWidth: CORNER_W,
+    borderRightWidth: CORNER_W,
+    borderBottomRightRadius: CORNER_R,
+  },
+  scanLine: {
+    position: "absolute",
+    left: 12,
+    right: 12,
+    height: 2,
+    borderRadius: 2,
+    backgroundColor: "#22c55e",
+    shadowColor: "#22c55e",
+    shadowOpacity: 1,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  lockedOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.35)",
+  },
+  lockedBadge: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 12,
-    marginHorizontal: 20,
-    marginBottom: 12,
-    backgroundColor: "#fff",
-    borderRadius: 12,
+    gap: 6,
+    backgroundColor: "rgba(239,68,68,0.85)",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
   },
-  statusIndicator: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },
-  statusText: { fontSize: 14, fontWeight: "600", color: "#2c3e50" },
-  resultContainer: {
+  lockedText: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  hintRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  hintText: { color: "#e2e8f0", fontSize: 14, fontWeight: "500" },
+  pill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginHorizontal: 20,
-    marginBottom: 12,
-    padding: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 24,
+  },
+  pillDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "rgba(255,255,255,0.6)",
+  },
+  pillText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 13,
+    letterSpacing: 0.3,
+  },
+  tipText: { color: "#64748b", fontSize: 11, fontWeight: "500" },
+  resultBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    margin: 12,
+    padding: 14,
     borderRadius: 12,
     borderWidth: 1,
   },
-  errorBg: { backgroundColor: "#fee", borderColor: "#fcc" },
-  successBg: { backgroundColor: "#d4edda", borderColor: "#c3e6cb" },
+  resultSuccess: { backgroundColor: "#f0fdf4", borderColor: "#bbf7d0" },
+  resultError: { backgroundColor: "#fef2f2", borderColor: "#fecaca" },
   resultText: { flex: 1, fontSize: 14, fontWeight: "600" },
-  errorColor: { color: "#e74c3c" },
-  successColor: { color: "#27ae60" },
+  errorColor: { color: "#ef4444" },
+  successColor: { color: "#16a34a" },
   buttonText: { color: "#fff", fontWeight: "bold" },
   successButton: { backgroundColor: "#4CAF50" },
   cancelButton: { backgroundColor: "#f44336" },
@@ -961,7 +1185,12 @@ const styles = StyleSheet.create({
   },
   text: { fontSize: 24, fontWeight: "bold", color: "white" },
   content: { marginTop: 40, justifyContent: "center", alignItems: "center" },
-  description: { fontSize: 16, textAlign: "center", marginTop: 20, opacity: 0.8 },
+  description: {
+    fontSize: 16,
+    textAlign: "center",
+    marginTop: 20,
+    opacity: 0.8,
+  },
   resultAlert: {
     marginTop: 10,
     marginHorizontal: 12,
@@ -976,21 +1205,28 @@ const styles = StyleSheet.create({
   },
   card: {
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: "#f1f5f9",
     marginBottom: 16,
     flexDirection: "column",
     gap: 10,
+    backgroundColor: "#fff",
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   boldText: {
-    fontWeight: "bold",
+    fontWeight: "700",
     fontSize: 16,
+    color: "#1e293b",
     marginBottom: 4,
   },
   divider: {
     height: 1,
-    backgroundColor: "#e5e7eb",
+    backgroundColor: "#f1f5f9",
     marginVertical: 10,
   },
   verticalDivider: {
@@ -1024,17 +1260,20 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   label: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
+    color: "#1e293b",
     marginBottom: 8,
   },
   textArea: {
     height: 120,
     borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
+    borderColor: "#e2e8f0",
+    borderRadius: 10,
     padding: 12,
     fontSize: 14,
     marginBottom: 16,
+    backgroundColor: "#f8fafc",
+    color: "#1e293b",
   },
 });

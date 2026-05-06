@@ -5,8 +5,11 @@ import axiosInstance from "@/utils/axiosInstance";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  Animated,
+  Dimensions,
+  Easing,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,38 +17,103 @@ import {
   View,
 } from "react-native";
 import BottomDrawer from "react-native-animated-bottom-drawer";
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const FRAME_SIZE = SCREEN_WIDTH * 0.65;
+
 export default function RTSIncomingScreen() {
   const router = useRouter();
-
-  const { playSuccess, playError, playWarning } = useScannerSounds();
+  const { playSuccess, playError } = useScannerSounds();
   const [data, setData] = useState<any>("");
   const [scanned, setScanned] = useState(false);
   const user = useAppSelector((state: any) => state.user.user);
   const [userData, setUserData] = useState<any>(null);
   const [loadingScan, setLoadingScan] = useState(false);
   const [scanResultMessage, setScanResultMessage] = useState("");
-  // const [waybillDetails, setWaybillDetails] = useState<any>([]);
   const [waybillDetails, setWaybillDetails] = useState<any>({});
-
   const bottomDrawerRef = useRef<any>(null);
 
-  const InfoRow = ({
+  const scanLineAnim = useRef(new Animated.Value(0)).current;
+  const glowAnim = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    // Scan line sweeps down
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(scanLineAnim, {
+          toValue: 1,
+          duration: 1800,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(scanLineAnim, {
+          toValue: 0,
+          duration: 1800,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]),
+    ).start();
+
+    // Corner glow pulse
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(glowAnim, {
+          toValue: 0.4,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ]),
+    ).start();
+  }, []);
+
+  const TableRow = ({
     label,
     value,
+    last,
+    accent,
   }: {
     label: string;
     value?: string | number;
+    last?: boolean;
+    accent?: boolean;
   }) => (
-    <View style={styles.row}>
-      <Text style={styles.label}>{label}</Text>
-      <Text style={styles.value}>{value ?? "-"}</Text>
+    <View
+      style={[
+        styles.tableRow,
+        !last && styles.tableRowBorder,
+        accent && styles.tableRowAccent,
+      ]}
+    >
+      <Text style={styles.tableLabel}>{label}</Text>
+      <Text style={styles.tableValue} numberOfLines={2}>
+        {value ?? "—"}
+      </Text>
     </View>
   );
 
-  const SectionHeader = ({ icon, title }: { icon: string; title: string }) => (
-    <View style={styles.sectionHeader}>
-      <Ionicons name={icon as any} size={18} color="#22c55e" />
-      <Text style={styles.sectionTitle}>{title}</Text>
+  const SectionCard = ({
+    icon,
+    title,
+    children,
+  }: {
+    icon: string;
+    title: string;
+    children: React.ReactNode;
+  }) => (
+    <View style={styles.sectionCard}>
+      <View style={styles.sectionCardHeader}>
+        <View style={styles.sectionIconBadge}>
+          <Ionicons name={icon as any} size={15} color="#22c55e" />
+        </View>
+        <Text style={styles.sectionCardTitle}>{title}</Text>
+      </View>
+      <View style={styles.tableCard}>{children}</View>
     </View>
   );
 
@@ -56,312 +124,635 @@ export default function RTSIncomingScreen() {
     setData(scannedCode);
   };
 
-  const renderOrderStatus = (orderStatus: any) => {
-    let color = "";
-    if (orderStatus === "Pending") color = "green";
-    if (orderStatus === "Picked up by Rider") color = "orange";
-    if (orderStatus === "Received by branch") color = "blue";
-    if (orderStatus === "Cancelled") color = "red";
-    if (orderStatus === "Printed") color = "cyan";
-    return <Text>{orderStatus}</Text>;
-  };
-
   useEffect(() => {
     const loadUserData = async () => {
       try {
         const storedUser = await AsyncStorage.getItem("user");
-        if (storedUser) {
-          setUserData(JSON.parse(storedUser));
-        } else if (user) {
-          setUserData(user);
-        }
-      } catch (error) {
-        console.error("Error loading user data:", error);
-      }
+        if (storedUser) setUserData(JSON.parse(storedUser));
+        else if (user) setUserData(user);
+      } catch (e) {}
     };
-
     loadUserData();
   }, [user]);
 
   useEffect(() => {
     const handleScan = async () => {
-      if (data) {
-        setLoadingScan(true);
-
-        try {
-          const { data: waybillData } = await axiosInstance(userData.token).get(
-            `/api/orderTransactions/fetchOrderTransactionByOrderNumber?orderNumber=${data.data}`,
-          );
-          playSuccess();
-
-          setWaybillDetails(waybillData);
-          setLoadingScan(false);
-          setScanned(false);
-          bottomDrawerRef.current?.open();
-        } catch (error) {
-          playError();
-          setLoadingScan(false);
-          setScanned(false);
-        }
+      if (!data) return;
+      setLoadingScan(true);
+      try {
+        const { data: waybillData } = await axiosInstance(userData.token).get(
+          `/api/orderTransactions/fetchOrderTransactionByOrderNumber?orderNumber=${data.data}`,
+        );
+        playSuccess();
+        setWaybillDetails(waybillData);
+        setLoadingScan(false);
+        setScanned(false);
+        bottomDrawerRef.current?.open();
+      } catch {
+        playError();
+        setLoadingScan(false);
+        setScanned(false);
       }
     };
-    if (userData !== null) {
-      handleScan();
-    }
+    if (userData) handleScan();
   }, [data, userData]);
+
+  const scanLineY = scanLineAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, FRAME_SIZE - 2],
+  });
+
+  const isLocked = scanned && !loadingScan;
+  const cornerColor = isLocked ? "#ef4444" : "#22c55e";
 
   return (
     <View style={styles.container}>
+      {/* ── Header ── */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Ionicons name="chevron-back" size={24} color="#22c55e" />
+          <Ionicons name="chevron-back" size={22} color="#22c55e" />
         </TouchableOpacity>
-        <View style={styles.headerTextContainer}>
+        <View>
           <Text style={styles.title}>Scan Items</Text>
-          <Text style={styles.subtitle}>Scan waybill or order number</Text>
+          <Text style={styles.subtitle}>Align barcode within the frame</Text>
         </View>
       </View>
 
-      <View style={styles.scannerContainer}>
-        <BarcodeScanner onScan={onScan} scanned={scanned} />
-      </View>
-      
-      <View style={styles.statusContainer}>
-        <View
-          style={[
-            styles.statusIndicator,
-            { backgroundColor: scanned ? "#ef4444" : "#22c55e" },
-          ]}
+      {/* ── Full-screen camera with overlay ── */}
+      <View style={styles.cameraContainer}>
+        {/* Camera fills entire block */}
+        <BarcodeScanner
+          onScan={onScan}
+          scanned={scanned}
+          containerStyle={styles.cameraFill}
         />
-        <Text style={styles.statusText}>
-          {loadingScan
-            ? "Processing..."
-            : scanned
-              ? "Camera Locked"
-              : "Ready to Scan"}
-        </Text>
+
+        {/* Overlay sits absolutely on top of camera */}
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          {/* Top dim */}
+          <View style={styles.dimTop} />
+
+          {/* Middle row: dim | frame | dim */}
+          <View style={styles.dimMiddleRow}>
+            <View style={styles.dimSide} />
+
+            {/* Scan frame — transparent window */}
+            <View
+              style={[
+                styles.frameContainer,
+                { width: FRAME_SIZE, height: FRAME_SIZE },
+              ]}
+            >
+              {/* Corner TL */}
+              <Animated.View
+                style={[
+                  styles.corner,
+                  styles.cTL,
+                  { borderColor: cornerColor, opacity: glowAnim },
+                ]}
+              />
+              {/* Corner TR */}
+              <Animated.View
+                style={[
+                  styles.corner,
+                  styles.cTR,
+                  { borderColor: cornerColor, opacity: glowAnim },
+                ]}
+              />
+              {/* Corner BL */}
+              <Animated.View
+                style={[
+                  styles.corner,
+                  styles.cBL,
+                  { borderColor: cornerColor, opacity: glowAnim },
+                ]}
+              />
+              {/* Corner BR */}
+              <Animated.View
+                style={[
+                  styles.corner,
+                  styles.cBR,
+                  { borderColor: cornerColor, opacity: glowAnim },
+                ]}
+              />
+
+              {/* Scan line */}
+              {!isLocked && (
+                <Animated.View
+                  style={[
+                    styles.scanLine,
+                    { transform: [{ translateY: scanLineY }] },
+                  ]}
+                />
+              )}
+
+              {/* Locked state */}
+              {isLocked && (
+                <View style={styles.lockedOverlay}>
+                  <View style={styles.lockedBadge}>
+                    <Ionicons name="lock-closed" size={20} color="#fff" />
+                    <Text style={styles.lockedText}>Locked</Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Processing state */}
+              {loadingScan && (
+                <View style={styles.lockedOverlay}>
+                  <View
+                    style={[
+                      styles.lockedBadge,
+                      { backgroundColor: "rgba(34,197,94,0.85)" },
+                    ]}
+                  >
+                    <Ionicons name="sync" size={20} color="#fff" />
+                    <Text style={styles.lockedText}>Processing…</Text>
+                  </View>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.dimSide} />
+          </View>
+
+          {/* Bottom dim — hint + status live here */}
+          <View style={styles.dimBottom}>
+            {/* Hint */}
+            <View style={styles.hintRow}>
+              <Ionicons name="scan-outline" size={16} color="#a3e635" />
+              <Text style={styles.hintText}>
+                {loadingScan
+                  ? "Fetching details…"
+                  : isLocked
+                    ? "Camera locked"
+                    : "Place barcode inside the frame"}
+              </Text>
+            </View>
+
+            {/* Status pill */}
+            <View
+              style={[
+                styles.pill,
+                { backgroundColor: isLocked ? "#ef4444" : "#22c55e" },
+              ]}
+            >
+              <View style={styles.pillDot} />
+              <Text style={styles.pillText}>
+                {loadingScan
+                  ? "Processing"
+                  : isLocked
+                    ? "Locked"
+                    : "Ready to Scan"}
+              </Text>
+            </View>
+
+            {/* Tip */}
+            {!isLocked && !loadingScan && (
+              <Text style={styles.tipText}>
+                Hold steady — auto-detects on focus
+              </Text>
+            )}
+          </View>
+        </View>
       </View>
-      
-      {scanResultMessage && (
-        <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle" size={20} color="#e74c3c" />
+
+      {/* Error banner */}
+      {!!scanResultMessage && (
+        <View style={styles.errorBanner}>
+          <Ionicons name="alert-circle" size={18} color="#ef4444" />
           <Text style={styles.errorText}>{scanResultMessage}</Text>
         </View>
       )}
 
+      {/* Bottom drawer */}
       <BottomDrawer
         ref={bottomDrawerRef}
-        initialHeight={560}
+        initialHeight={SCREEN_HEIGHT * 0.78}
         enableSnapping={false}
       >
-        <View style={styles.drawerHandle} />
-        <ScrollView contentContainerStyle={styles.drawerContent}>
-          <SectionHeader icon="cube" title="Item Details" />
+        <View style={[styles.drawerInner, { height: SCREEN_HEIGHT * 0.78 }]}>
+          <View style={styles.drawerHandle} />
 
-          <InfoRow label="Item Name" value={waybillDetails.itemName} />
-          <InfoRow label="Item Weight" value={waybillDetails.itemWeight} />
-          <InfoRow
-            label="Number Of Items"
-            value={waybillDetails.numberOfItem}
-          />
-          <InfoRow label="COD Value" value={`₱ ${waybillDetails.codValue}`} />
-          <InfoRow label="COD Fee" value={`₱ ${waybillDetails.codFee}`} />
-          <InfoRow label="Item Value" value={`₱ ${waybillDetails.itemValue}`} />
-          <InfoRow
-            label="Valuation Fee"
-            value={`₱ ${waybillDetails.valuationFee}`}
-          />
-          <InfoRow
-            label="Receivable Freight"
-            value={`₱ ${waybillDetails.receivableFreight}`}
-          />
-          <InfoRow
-            label="Total Shipping Costs"
-            value={`₱ ${waybillDetails.totalShippingCost}`}
-          />
-          <InfoRow label="Pouches Size" value={waybillDetails.pouchesSize} />
-          <InfoRow label="Remarks" value={waybillDetails.remarks} />
+          {/* Waybill number hero badge */}
+          {!!waybillDetails.waybillNumber && (
+            <View style={styles.waybillHero}>
+              <Text style={styles.waybillHeroLabel}>Waybill No.</Text>
+              <Text style={styles.waybillHeroNumber}>
+                {waybillDetails.waybillNumber}
+              </Text>
+              <View
+                style={[
+                  styles.statusBadge,
+                  {
+                    backgroundColor:
+                      waybillDetails.orderStatus === "Delivered"
+                        ? "#dcfce7"
+                        : "#fef9c3",
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.statusBadgeText,
+                    {
+                      color:
+                        waybillDetails.orderStatus === "Delivered"
+                          ? "#15803d"
+                          : "#a16207",
+                    },
+                  ]}
+                >
+                  {waybillDetails.orderStatus ?? "—"}
+                </Text>
+              </View>
+            </View>
+          )}
 
-          <SectionHeader icon="document-text" title="Waybill Details" />
+          <ScrollView
+            style={styles.drawerScroll}
+            contentContainerStyle={styles.drawerContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <SectionCard icon="cube-outline" title="Item Details">
+              <TableRow label="Item Name" value={waybillDetails.itemName} />
+              <TableRow label="Item Weight" value={waybillDetails.itemWeight} />
+              <TableRow
+                label="No. of Items"
+                value={waybillDetails.numberOfItem}
+              />
+              <TableRow
+                label="Pouches Size"
+                value={waybillDetails.pouchesSize}
+              />
+              <TableRow label="Remarks" value={waybillDetails.remarks} last />
+            </SectionCard>
 
-          <InfoRow
-            label="Waybill Number"
-            value={waybillDetails.waybillNumber}
-          />
-          <InfoRow label="Order Number" value={waybillDetails.orderNumber} />
-          <InfoRow label="Status" value={waybillDetails.orderStatus} />
+            <SectionCard icon="cash-outline" title="Fees & Costs">
+              <TableRow
+                label="COD Value"
+                value={`₱ ${waybillDetails.codValue ?? "—"}`}
+                accent
+              />
+              <TableRow
+                label="COD Fee"
+                value={`₱ ${waybillDetails.codFee ?? "—"}`}
+              />
+              <TableRow
+                label="Item Value"
+                value={`₱ ${waybillDetails.itemValue ?? "—"}`}
+                accent
+              />
+              <TableRow
+                label="Valuation Fee"
+                value={`₱ ${waybillDetails.valuationFee ?? "—"}`}
+              />
+              <TableRow
+                label="Receivable Freight"
+                value={`₱ ${waybillDetails.receivableFreight ?? "—"}`}
+                accent
+              />
+              <TableRow
+                label="Total Shipping Cost"
+                value={`₱ ${waybillDetails.totalShippingCost ?? "—"}`}
+                last
+              />
+            </SectionCard>
 
-          <SectionHeader icon="person" title="Sender" />
+            <SectionCard icon="document-text-outline" title="Order Details">
+              <TableRow
+                label="Order Number"
+                value={waybillDetails.orderNumber}
+              />
+              <TableRow
+                label="Waybill Number"
+                value={waybillDetails.waybillNumber}
+                last
+              />
+            </SectionCard>
 
-          <InfoRow label="Name" value={waybillDetails.senderName} />
-          <InfoRow label="Phone" value={waybillDetails.senderPhone} />
-          <InfoRow
-            label="Province / City / Brgy"
-            value={`${waybillDetails.senderProvince} / ${waybillDetails.senderCity} / ${waybillDetails.senderBarangay}`}
-          />
-          <InfoRow label="Address" value={waybillDetails.senderAddress} />
+            <SectionCard icon="person-outline" title="Sender">
+              <TableRow label="Name" value={waybillDetails.senderName} accent />
+              <TableRow label="Phone" value={waybillDetails.senderPhone} />
+              <TableRow
+                label="Province"
+                value={waybillDetails.senderProvince}
+                accent
+              />
+              <TableRow label="City" value={waybillDetails.senderCity} />
+              <TableRow
+                label="Barangay"
+                value={waybillDetails.senderBarangay}
+                accent
+              />
+              <TableRow
+                label="Address"
+                value={waybillDetails.senderAddress}
+                last
+              />
+            </SectionCard>
 
-          <SectionHeader icon="location" title="Recipient" />
-
-          <InfoRow label="Name" value={waybillDetails.receiverName} />
-          <InfoRow label="Phone" value={waybillDetails.receiverPhone} />
-          <InfoRow
-            label="Province / City / Brgy"
-            value={`${waybillDetails.receiverProvince} / ${waybillDetails.receiverCity} / ${waybillDetails.receiverBarangay}`}
-          />
-          <InfoRow label="Address" value={waybillDetails.receiverAddress} />
-        </ScrollView>
+            <SectionCard icon="location-outline" title="Recipient">
+              <TableRow
+                label="Name"
+                value={waybillDetails.receiverName}
+                accent
+              />
+              <TableRow label="Phone" value={waybillDetails.receiverPhone} />
+              <TableRow
+                label="Province"
+                value={waybillDetails.receiverProvince}
+                accent
+              />
+              <TableRow label="City" value={waybillDetails.receiverCity} />
+              <TableRow
+                label="Barangay"
+                value={waybillDetails.receiverBarangay}
+                accent
+              />
+              <TableRow
+                label="Address"
+                value={waybillDetails.receiverAddress}
+                last
+              />
+            </SectionCard>
+          </ScrollView>
+        </View>
       </BottomDrawer>
     </View>
   );
 }
 
+const CORNER_LEN = 32;
+const CORNER_W = 4;
+const CORNER_R = 8;
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f5f7fa",
-  },
+  container: { flex: 1, backgroundColor: "#0a0a0a" },
+
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: 50,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
+    gap: 12,
+    paddingTop: 54,
+    paddingBottom: 14,
+    paddingHorizontal: 16,
     backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: "#f0fdf4",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 8,
   },
-  headerTextContainer: {
+  title: { fontSize: 18, fontWeight: "700", color: "#1e293b" },
+  subtitle: { fontSize: 12, color: "#94a3b8", marginTop: 1 },
+
+  // Camera: fills all remaining space
+  cameraContainer: { flex: 1, position: "relative", backgroundColor: "#000" },
+  cameraFill: {
     flex: 1,
+    margin: 0,
+    marginTop: 0,
+    marginHorizontal: 0,
+    height: undefined,
+    borderRadius: 0,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#2c3e50",
+
+  // Dim overlay regions
+  dimTop: { backgroundColor: "rgba(0,0,0,0.72)", flex: 1 },
+  dimMiddleRow: { flexDirection: "row" },
+  dimSide: { flex: 1, backgroundColor: "rgba(0,0,0,0.72)" },
+  dimBottom: {
+    backgroundColor: "rgba(0,0,0,0.72)",
+    flex: 1.3,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 14,
+    paddingBottom: 16,
   },
-  subtitle: {
-    fontSize: 13,
-    color: "#7f8c8d",
-    marginTop: 2,
+
+  // Frame window (transparent)
+  frameContainer: { position: "relative" },
+
+  // Corners
+  corner: { position: "absolute", width: CORNER_LEN, height: CORNER_LEN },
+  cTL: {
+    top: 0,
+    left: 0,
+    borderTopWidth: CORNER_W,
+    borderLeftWidth: CORNER_W,
+    borderTopLeftRadius: CORNER_R,
   },
-  scannerContainer: {
-    flex: 1,
-    margin: 20,
-    borderRadius: 16,
-    overflow: "hidden",
+  cTR: {
+    top: 0,
+    right: 0,
+    borderTopWidth: CORNER_W,
+    borderRightWidth: CORNER_W,
+    borderTopRightRadius: CORNER_R,
   },
-  statusContainer: {
+  cBL: {
+    bottom: 0,
+    left: 0,
+    borderBottomWidth: CORNER_W,
+    borderLeftWidth: CORNER_W,
+    borderBottomLeftRadius: CORNER_R,
+  },
+  cBR: {
+    bottom: 0,
+    right: 0,
+    borderBottomWidth: CORNER_W,
+    borderRightWidth: CORNER_W,
+    borderBottomRightRadius: CORNER_R,
+  },
+
+  // Scan line
+  scanLine: {
+    position: "absolute",
+    left: 12,
+    right: 12,
+    height: 2,
+    borderRadius: 2,
+    backgroundColor: "#22c55e",
+    shadowColor: "#22c55e",
+    shadowOpacity: 1,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+
+  // States inside frame
+  lockedOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.35)",
+  },
+  lockedBadge: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 12,
-    marginHorizontal: 20,
-    marginBottom: 12,
-    backgroundColor: "#fff",
-    borderRadius: 12,
+    gap: 6,
+    backgroundColor: "rgba(239,68,68,0.85)",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
   },
-  statusIndicator: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 8,
-  },
-  statusText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#2c3e50",
-  },
-  errorContainer: {
+  lockedText: { color: "#fff", fontWeight: "700", fontSize: 14 },
+
+  // Bottom hints
+  hintRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    gap: 6,
+  },
+  hintText: { color: "#e2e8f0", fontSize: 14, fontWeight: "500" },
+  pill: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
-    marginHorizontal: 20,
-    marginBottom: 12,
-    padding: 12,
-    backgroundColor: "#fee",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 24,
+  },
+  pillDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "rgba(255,255,255,0.6)",
+  },
+  pillText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 13,
+    letterSpacing: 0.3,
+  },
+  tipText: { color: "#64748b", fontSize: 11, fontWeight: "500" },
+
+  // Error
+  errorBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    margin: 12,
+    padding: 14,
+    backgroundColor: "#fef2f2",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#fcc",
+    borderColor: "#fecaca",
   },
-  errorText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#e74c3c",
+  errorText: { fontSize: 13, fontWeight: "600", color: "#ef4444", flex: 1 },
+
+  // Drawer
+  drawerInner: {
     flex: 1,
   },
   drawerHandle: {
     width: 40,
     height: 4,
-    backgroundColor: "#e8ecf1",
+    backgroundColor: "#e2e8f0",
     borderRadius: 2,
     alignSelf: "center",
-    marginTop: 8,
-    marginBottom: 16,
+    marginTop: 10,
+    marginBottom: 4,
   },
-  drawerContent: {
-    padding: 20,
-    paddingBottom: 40,
+
+  // Waybill hero badge
+  waybillHero: {
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
+    gap: 4,
   },
-  sectionHeader: {
+  waybillHeroLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#94a3b8",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  waybillHeroNumber: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#1e293b",
+    letterSpacing: 0.5,
+  },
+  statusBadge: {
+    marginTop: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  statusBadgeText: {
+    fontSize: 12,
+    fontWeight: "700",
+  },
+
+  drawerScroll: { flex: 1 },
+  drawerContent: { paddingHorizontal: 14, paddingBottom: 40, gap: 14 },
+
+  // Section card
+  sectionCard: { gap: 0 },
+  sectionCardHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginTop: 20,
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#2c3e50",
-  },
-  row: {
-    borderWidth: 1,
-    borderColor: "#e8ecf1",
-    borderRadius: 8,
-    padding: 12,
     marginBottom: 8,
-    backgroundColor: "#fff",
   },
-  label: {
-    fontSize: 11,
-    color: "#7f8c8d",
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  value: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#2c3e50",
-  },
-  content: {
-    marginTop: 40,
+  sectionIconBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: "#f0fdf4",
     justifyContent: "center",
     alignItems: "center",
   },
-  description: {
-    fontSize: 16,
-    textAlign: "center",
-    marginTop: 20,
-    opacity: 0.8,
+  sectionCardTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#1e293b",
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
   },
-  resultAlert: {
-    marginTop: 10,
-    marginHorizontal: 12,
-    padding: 10,
-    borderRadius: 8,
-    borderWidth: 2,
+
+  // Table card
+  tableCard: {
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 12,
+    overflow: "hidden",
+    backgroundColor: "#fff",
+  },
+  tableRow: {
+    flexDirection: "row",
     alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 11,
   },
-  resultText: { fontSize: 14, fontWeight: "600", marginTop: 4 },
+  tableRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
+  },
+  tableRowAccent: {
+    backgroundColor: "#f8fafc",
+  },
+  tableLabel: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#64748b",
+  },
+  tableValue: {
+    flex: 1.4,
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#1e293b",
+    textAlign: "right",
+  },
 });

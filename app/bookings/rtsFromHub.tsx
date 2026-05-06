@@ -5,8 +5,22 @@ import axiosInstance from "@/utils/axiosInstance";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  Animated,
+  Dimensions,
+  Easing,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const FRAME_SIZE = SCREEN_WIDTH * 0.65;
+const CORNER_LEN = 32;
+const CORNER_W = 4;
+const CORNER_R = 8;
+
 export default function RtsFromHub() {
   const router = useRouter();
   const { playSuccess, playError, playWarning } = useScannerSounds();
@@ -21,6 +35,42 @@ export default function RtsFromHub() {
   const [alertColor, setAlertColor] = useState<"green" | "yellow" | "red">(
     "green",
   );
+
+  const scanLineAnim = useRef(new Animated.Value(0)).current;
+  const glowAnim = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(scanLineAnim, {
+          toValue: 1,
+          duration: 1800,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(scanLineAnim, {
+          toValue: 0,
+          duration: 1800,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]),
+    ).start();
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(glowAnim, {
+          toValue: 0.4,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ]),
+    ).start();
+  }, []);
 
   const onScan = async (scannedCode: any) => {
     if (scanned) return;
@@ -171,6 +221,13 @@ export default function RtsFromHub() {
     loadUserData();
   }, [user]);
 
+  const scanLineY = scanLineAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, FRAME_SIZE - 2],
+  });
+  const isLocked = scanned && !loadingScan;
+  const cornerColor = isLocked ? "#ef4444" : "#22c55e";
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -178,7 +235,7 @@ export default function RtsFromHub() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Ionicons name="chevron-back" size={24} color="#22c55e" />
+          <Ionicons name="chevron-back" size={22} color="#22c55e" />
         </TouchableOpacity>
         <View style={styles.headerTextContainer}>
           <Text style={styles.title}>RTS from Hub</Text>
@@ -186,35 +243,126 @@ export default function RtsFromHub() {
         </View>
       </View>
 
-      <View style={styles.scannerContainer}>
-        <BarcodeScanner onScan={onScan} scanned={scanned} />
-      </View>
-
-      <View style={styles.statusContainer}>
-        <View
-          style={[
-            styles.statusIndicator,
-            { backgroundColor: scanned ? "#ef4444" : "#22c55e" },
-          ]}
+      <View style={styles.cameraContainer}>
+        <BarcodeScanner
+          onScan={onScan}
+          scanned={scanned}
+          containerStyle={styles.cameraFill}
         />
-        <Text style={styles.statusText}>
-          {loadingScan
-            ? "Processing..."
-            : scanned
-              ? "Camera Locked"
-              : "Ready to Scan"}
-        </Text>
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          <View style={styles.dimTop} />
+          <View style={styles.dimMiddleRow}>
+            <View style={styles.dimSide} />
+            <View
+              style={[
+                styles.frameContainer,
+                { width: FRAME_SIZE, height: FRAME_SIZE },
+              ]}
+            >
+              <Animated.View
+                style={[
+                  styles.corner,
+                  styles.cTL,
+                  { borderColor: cornerColor, opacity: glowAnim },
+                ]}
+              />
+              <Animated.View
+                style={[
+                  styles.corner,
+                  styles.cTR,
+                  { borderColor: cornerColor, opacity: glowAnim },
+                ]}
+              />
+              <Animated.View
+                style={[
+                  styles.corner,
+                  styles.cBL,
+                  { borderColor: cornerColor, opacity: glowAnim },
+                ]}
+              />
+              <Animated.View
+                style={[
+                  styles.corner,
+                  styles.cBR,
+                  { borderColor: cornerColor, opacity: glowAnim },
+                ]}
+              />
+              {!isLocked && (
+                <Animated.View
+                  style={[
+                    styles.scanLine,
+                    { transform: [{ translateY: scanLineY }] },
+                  ]}
+                />
+              )}
+              {isLocked && (
+                <View style={styles.lockedOverlay}>
+                  <View style={styles.lockedBadge}>
+                    <Ionicons name="lock-closed" size={20} color="#fff" />
+                    <Text style={styles.lockedText}>Locked</Text>
+                  </View>
+                </View>
+              )}
+              {loadingScan && (
+                <View style={styles.lockedOverlay}>
+                  <View
+                    style={[
+                      styles.lockedBadge,
+                      { backgroundColor: "rgba(34,197,94,0.85)" },
+                    ]}
+                  >
+                    <Ionicons name="sync" size={20} color="#fff" />
+                    <Text style={styles.lockedText}>Processing…</Text>
+                  </View>
+                </View>
+              )}
+            </View>
+            <View style={styles.dimSide} />
+          </View>
+          <View style={styles.dimBottom}>
+            <View style={styles.hintRow}>
+              <Ionicons name="scan-outline" size={16} color="#a3e635" />
+              <Text style={styles.hintText}>
+                {loadingScan
+                  ? "Fetching details…"
+                  : isLocked
+                    ? "Camera locked"
+                    : "Place barcode inside the frame"}
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.pill,
+                { backgroundColor: isLocked ? "#ef4444" : "#22c55e" },
+              ]}
+            >
+              <View style={styles.pillDot} />
+              <Text style={styles.pillText}>
+                {loadingScan
+                  ? "Processing"
+                  : isLocked
+                    ? "Locked"
+                    : "Ready to Scan"}
+              </Text>
+            </View>
+            {!isLocked && !loadingScan && (
+              <Text style={styles.tipText}>
+                Hold steady — auto-detects on focus
+              </Text>
+            )}
+          </View>
+        </View>
       </View>
 
       {scanResultMessage && (
         <View
           style={[
-            styles.resultContainer,
+            styles.resultBanner,
             alertColor === "green"
-              ? styles.successBg
+              ? styles.resultSuccess
               : alertColor === "yellow"
-                ? styles.warningBg
-                : styles.errorBg,
+                ? styles.resultWarning
+                : styles.resultError,
           ]}
         >
           <Ionicons
@@ -225,23 +373,23 @@ export default function RtsFromHub() {
                   ? "warning"
                   : "close-circle"
             }
-            size={24}
+            size={20}
             color={
               alertColor === "green"
                 ? "#22c55e"
                 : alertColor === "yellow"
-                  ? "#f39c12"
-                  : "#e74c3c"
+                  ? "#f59e0b"
+                  : "#ef4444"
             }
           />
           <Text
             style={[
               styles.resultText,
               alertColor === "green"
-                ? styles.successColor
+                ? styles.resultSuccessText
                 : alertColor === "yellow"
-                  ? styles.warningColor
-                  : styles.errorColor,
+                  ? styles.resultWarningText
+                  : styles.resultErrorText,
             ]}
           >
             {scanResultMessage}
@@ -253,78 +401,144 @@ export default function RtsFromHub() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f5f7fa" },
+  container: { flex: 1, backgroundColor: "#0a0a0a" },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: 50,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
+    gap: 12,
+    paddingTop: 54,
+    paddingBottom: 14,
+    paddingHorizontal: 16,
     backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
   },
   headerTextContainer: { flex: 1 },
   backButton: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: "#f0fdf4",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 8,
   },
-  title: { fontSize: 22, fontWeight: "700", color: "#2c3e50" },
-  subtitle: { fontSize: 13, color: "#7f8c8d", marginTop: 2 },
-  scannerContainer: {
+  title: { fontSize: 18, fontWeight: "700", color: "#1e293b" },
+  subtitle: { fontSize: 12, color: "#94a3b8", marginTop: 1 },
+  cameraContainer: { flex: 1, position: "relative", backgroundColor: "#000" },
+  cameraFill: {
     flex: 1,
-    margin: 20,
-    borderRadius: 16,
-    overflow: "hidden",
+    margin: 0,
+    marginTop: 0,
+    marginHorizontal: 0,
+    height: undefined,
+    borderRadius: 0,
   },
-  statusContainer: {
-    flexDirection: "row",
+  dimTop: { backgroundColor: "rgba(0,0,0,0.72)", flex: 1 },
+  dimMiddleRow: { flexDirection: "row" },
+  dimSide: { flex: 1, backgroundColor: "rgba(0,0,0,0.72)" },
+  dimBottom: {
+    backgroundColor: "rgba(0,0,0,0.72)",
+    flex: 1.3,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 12,
-    marginHorizontal: 20,
-    marginBottom: 12,
-    backgroundColor: "#fff",
-    borderRadius: 12,
+    gap: 14,
+    paddingBottom: 16,
   },
-  statusIndicator: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },
-  statusText: { fontSize: 14, fontWeight: "600", color: "#2c3e50" },
-  resultContainer: {
+  frameContainer: { position: "relative" },
+  corner: { position: "absolute", width: CORNER_LEN, height: CORNER_LEN },
+  cTL: {
+    top: 0,
+    left: 0,
+    borderTopWidth: CORNER_W,
+    borderLeftWidth: CORNER_W,
+    borderTopLeftRadius: CORNER_R,
+  },
+  cTR: {
+    top: 0,
+    right: 0,
+    borderTopWidth: CORNER_W,
+    borderRightWidth: CORNER_W,
+    borderTopRightRadius: CORNER_R,
+  },
+  cBL: {
+    bottom: 0,
+    left: 0,
+    borderBottomWidth: CORNER_W,
+    borderLeftWidth: CORNER_W,
+    borderBottomLeftRadius: CORNER_R,
+  },
+  cBR: {
+    bottom: 0,
+    right: 0,
+    borderBottomWidth: CORNER_W,
+    borderRightWidth: CORNER_W,
+    borderBottomRightRadius: CORNER_R,
+  },
+  scanLine: {
+    position: "absolute",
+    left: 12,
+    right: 12,
+    height: 2,
+    borderRadius: 2,
+    backgroundColor: "#22c55e",
+    shadowColor: "#22c55e",
+    shadowOpacity: 1,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  lockedOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.35)",
+  },
+  lockedBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    marginHorizontal: 20,
-    marginBottom: 12,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    gap: 6,
+    backgroundColor: "rgba(239,68,68,0.85)",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
   },
-  errorBg: { backgroundColor: "#fee2e2", borderColor: "#ef4444" },
-  successBg: { backgroundColor: "#d1fae5", borderColor: "#22c55e" },
-  warningBg: { backgroundColor: "#fef3c7", borderColor: "#f59e0b" },
-  resultText: { flex: 1, fontSize: 14, fontWeight: "600", lineHeight: 20 },
-  errorColor: { color: "#dc2626" },
-  successColor: { color: "#16a34a" },
-  warningColor: { color: "#d97706" },
-  content: { marginTop: 40, justifyContent: "center", alignItems: "center" },
-  description: {
-    fontSize: 16,
-    textAlign: "center",
-    marginTop: 20,
-    opacity: 0.8,
-  },
-  resultAlert: {
-    marginTop: 10,
-    marginHorizontal: 12,
-    padding: 10,
-    borderRadius: 8,
-    borderWidth: 2,
+  lockedText: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  hintRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  hintText: { color: "#e2e8f0", fontSize: 14, fontWeight: "500" },
+  pill: {
+    flexDirection: "row",
     alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 24,
   },
+  pillDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "rgba(255,255,255,0.6)",
+  },
+  pillText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 13,
+    letterSpacing: 0.3,
+  },
+  tipText: { color: "#64748b", fontSize: 11, fontWeight: "500" },
+  resultBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    margin: 12,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  resultSuccess: { backgroundColor: "#f0fdf4", borderColor: "#bbf7d0" },
+  resultWarning: { backgroundColor: "#fef9c3", borderColor: "#fde68a" },
+  resultError: { backgroundColor: "#fef2f2", borderColor: "#fecaca" },
+  resultText: { flex: 1, fontSize: 13, fontWeight: "600" },
+  resultSuccessText: { color: "#16a34a" },
+  resultWarningText: { color: "#d97706" },
+  resultErrorText: { color: "#dc2626" },
 });

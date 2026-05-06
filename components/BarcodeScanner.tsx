@@ -6,14 +6,20 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ViewStyle,
 } from "react-native";
 
 interface BarcodeScannerProps {
   onScan: (data: { data: string }) => void;
   scanned: boolean;
+  containerStyle?: ViewStyle;
 }
 
-export function BarcodeScanner({ onScan, scanned }: BarcodeScannerProps) {
+export function BarcodeScanner({
+  onScan,
+  scanned,
+  containerStyle,
+}: BarcodeScannerProps) {
   const [permission, requestPermission] = useCameraPermissions();
 
   if (!permission) {
@@ -42,7 +48,7 @@ export function BarcodeScanner({ onScan, scanned }: BarcodeScannerProps) {
   }
 
   return (
-    <View style={styles.scannerContainer}>
+    <View style={[styles.scannerContainer, containerStyle]}>
       <CameraView
         onBarcodeScanned={scanned ? undefined : onScan}
         barcodeScannerSettings={{

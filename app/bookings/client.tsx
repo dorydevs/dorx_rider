@@ -1,9 +1,17 @@
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { useAppSelector } from "@/store/hooks";
 import axiosInstance from "@/utils/axiosInstance";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useIsFocused } from "@react-navigation/native";
 import { useRouter } from "expo-router";
+import {
+  AlertCircle,
+  Building2,
+  ChevronRight,
+  FolderOpen,
+  MapPin,
+  TriangleAlert,
+} from "lucide-react-native";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -23,7 +31,6 @@ export default function ClientScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const isFocused = useIsFocused();
-  const dispatch = useAppDispatch();
   const user = useAppSelector((state: any) => state.user.user);
   const [userData, setUserData] = useState<any>(null);
   const [remittanceCheckerData, setRemittanceCheckerData] =
@@ -114,38 +121,43 @@ export default function ClientScreen() {
   const renderItem = ({ item }: { item: Booking }) => {
     return (
       <TouchableOpacity
-        style={[styles.card, { width: Math.min(760, width - 40) }]}
+        style={[styles.card, { maxWidth: Math.min(760, width - 32) }]}
         onPress={() => handlePress(item)}
-        activeOpacity={0.7}
+        activeOpacity={0.75}
       >
         <View style={styles.cardIconContainer}>
-          <Ionicons name="business" size={22} color="#22c55e" />
+          <Building2 size={22} color="#22c55e" strokeWidth={2} />
         </View>
         <View style={styles.cardContent}>
-          <Text style={styles.cardTitle}>{item.clientName}</Text>
+          <Text style={styles.cardTitle} numberOfLines={1}>
+            {item.clientName}
+          </Text>
           <View style={styles.cardDetailRow}>
-            <Ionicons name="location-outline" size={14} color="#7f8c8d" />
-            <Text style={styles.cardAddress} numberOfLines={2}>
+            <MapPin size={12} color="#94a3b8" strokeWidth={2} />
+            <Text style={styles.cardAddress} numberOfLines={1}>
               {item.address}
             </Text>
           </View>
         </View>
-        <Ionicons name="chevron-forward" size={20} color="#bdc3c7" />
+        <View style={styles.chevron}>
+          <ChevronRight size={16} color="#22c55e" strokeWidth={2.5} />
+        </View>
       </TouchableOpacity>
     );
   };
 
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Ionicons name="chevron-back" size={24} color="#22c55e" />
+          <Ionicons name="chevron-back" size={22} color="#22c55e" />
         </TouchableOpacity>
         <View style={styles.headerTextContainer}>
-          <Text style={styles.title}>Client Bookings </Text>
+          <Text style={styles.title}>Client Bookings</Text>
           <Text style={styles.subtitle}>Pickup orders from clients</Text>
         </View>
       </View>
@@ -157,14 +169,16 @@ export default function ClientScreen() {
         </View>
       ) : error ? (
         <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle" size={48} color="#e74c3c" />
+          <AlertCircle size={48} color="#ef4444" strokeWidth={1.5} />
           <Text style={styles.errorText}>Something went wrong</Text>
           <Text style={styles.errorSubtext}>{error}</Text>
         </View>
       ) : remittanceCheckerData ? (
         <View style={styles.remittanceContainer}>
           <View style={styles.remittanceCard}>
-            <FontAwesome name="exclamation-circle" size={22} color="red" />
+            <View style={styles.remittanceIconCircle}>
+              <TriangleAlert size={32} color="#ef4444" strokeWidth={1.8} />
+            </View>
             <Text style={styles.remittanceTitle}>Remittance Required</Text>
             <Text style={styles.remittanceMessage}>
               Remittance balance must be remitted before you can access client
@@ -183,11 +197,15 @@ export default function ClientScreen() {
           }
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
-          ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+          ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+          showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Ionicons name="folder-open-outline" size={48} color="#bdc3c7" />
+              <FolderOpen size={52} color="#cbd5e1" strokeWidth={1.5} />
               <Text style={styles.emptyText}>No bookings available</Text>
+              <Text style={styles.emptySubtext}>
+                Bookings will appear here when assigned
+              </Text>
             </View>
           }
         />
@@ -199,52 +217,61 @@ export default function ClientScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f7fa",
+    backgroundColor: "#f0fdf4",
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: 50,
+    paddingTop: 54,
     paddingBottom: 16,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: "#f0fdf4",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 8,
+    marginRight: 10,
   },
   headerTextContainer: {
     flex: 1,
   },
   title: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "700",
-    color: "#2c3e50",
+    color: "#1e293b",
   },
   subtitle: {
-    fontSize: 13,
-    color: "#7f8c8d",
+    fontSize: 12,
+    color: "#94a3b8",
     marginTop: 2,
   },
   listContent: {
-    padding: 20,
+    padding: 16,
     paddingBottom: 32,
   },
   card: {
-    padding: 16,
-    borderRadius: 12,
+    padding: 14,
+    borderRadius: 14,
     backgroundColor: "#ffffff",
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   cardIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     backgroundColor: "#dcfce7",
     justifyContent: "center",
     alignItems: "center",
@@ -256,56 +283,114 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#2c3e50",
+    color: "#1e293b",
   },
   cardDetailRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 5,
   },
   cardAddress: {
-    fontSize: 13,
-    color: "#7f8c8d",
+    fontSize: 12,
+    color: "#94a3b8",
     flex: 1,
+  },
+  chevron: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: "#f0fdf4",
+    justifyContent: "center",
+    alignItems: "center",
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 40,
+    gap: 12,
   },
   loadingText: {
-    marginTop: 12,
     fontSize: 14,
-    color: "#7f8c8d",
+    color: "#94a3b8",
   },
   errorContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: 40,
+    gap: 10,
   },
   errorText: {
-    marginTop: 16,
     fontSize: 16,
     fontWeight: "600",
-    color: "#e74c3c",
+    color: "#ef4444",
   },
   errorSubtext: {
-    marginTop: 8,
-    fontSize: 14,
-    color: "#95a5a6",
+    fontSize: 13,
+    color: "#94a3b8",
     textAlign: "center",
   },
   emptyContainer: {
-    padding: 40,
+    padding: 48,
     alignItems: "center",
-    justifyContent: "center",
+    gap: 8,
   },
   emptyText: {
-    marginTop: 12,
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#64748b",
+    marginTop: 4,
+  },
+  emptySubtext: {
+    fontSize: 13,
+    color: "#94a3b8",
+    textAlign: "center",
+  },
+  remittanceContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  remittanceCard: {
+    width: "100%",
+    maxWidth: 380,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 24,
+    alignItems: "center",
+    gap: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  remittanceIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#fef2f2",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  remittanceTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#ef4444",
+  },
+  remittanceMessage: {
     fontSize: 14,
-    color: "#7f8c8d",
+    textAlign: "center",
+    color: "#64748b",
+    lineHeight: 20,
+  },
+  remittanceSupport: {
+    fontSize: 13,
+    textAlign: "center",
+    color: "#94a3b8",
+    fontStyle: "italic",
   },
   content: {
     marginTop: 40,
@@ -317,40 +402,5 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 20,
     opacity: 0.8,
-  },
-  remittanceContainer: {
-    marginTop: 45,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 12,
-  },
-  remittanceCard: {
-    width: "100%",
-    maxWidth: 760,
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    paddingVertical: 18,
-    paddingHorizontal: 16,
-    alignItems: "center",
-    elevation: 2,
-  },
-  remittanceTitle: {
-    marginTop: 10,
-    fontSize: 18,
-    fontWeight: "700",
-    color: "red",
-  },
-  remittanceMessage: {
-    marginTop: 8,
-    fontSize: 14,
-    textAlign: "center",
-    color: "red",
-    lineHeight: 20,
-  },
-  remittanceSupport: {
-    marginTop: 6,
-    fontSize: 13,
-    textAlign: "center",
-    color: "red",
   },
 });

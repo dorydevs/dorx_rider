@@ -1,13 +1,25 @@
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { clearUser } from "@/store/slices/userSlice";
 import { clearSession } from "@/utils/auth";
-import { Ionicons } from "@expo/vector-icons";
-import AntDesign from "@expo/vector-icons/AntDesign";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
+import {
+  LogOut,
+  Mail,
+  MapPin,
+  Phone,
+  Shield,
+  Store,
+} from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 export default function AccountScreen() {
   const router = useRouter();
@@ -55,23 +67,38 @@ export default function AccountScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.card}>
-        <View style={styles.header}>
-          <View style={styles.avatarContainer}>
-            <FontAwesome name="user-o" size={40} color="#fff" />
-          </View>
-          <View style={styles.headerInfo}>
-            <Text style={styles.name}>{userData?.name || "User"}</Text>
-            <Text style={styles.role}>
-              {userData?.accountType === 1 ? "Hub Rider" : "Store Rider"}
-            </Text>
-          </View>
+      {/* Header Banner */}
+      <View style={styles.headerBanner}>
+        <View style={styles.avatarContainer}>
+          <Text style={styles.avatarInitials}>
+            {(userData?.name || "U")
+              .split(" ")
+              .map((n: string) => n[0])
+              .join("")
+              .slice(0, 2)
+              .toUpperCase()}
+          </Text>
         </View>
+        <Text style={styles.name}>{userData?.name || "User"}</Text>
+        <View style={styles.roleBadge}>
+          <Shield size={12} color="#22c55e" strokeWidth={2} />
+          <Text style={styles.roleText}>
+            {userData?.accountType === 1 ? "Hub Rider" : "Store Rider"}
+          </Text>
+        </View>
+      </View>
 
-        <View style={styles.infoSection}>
+      <ScrollView
+        style={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Info Card */}
+        <View style={styles.card}>
+          <Text style={styles.cardSectionTitle}>Contact Information</Text>
+
           <View style={styles.row}>
             <View style={styles.iconContainer}>
-              <Ionicons name="call-outline" size={18} color="#22c55e" />
+              <Phone size={16} color="#22c55e" strokeWidth={2} />
             </View>
             <View style={styles.rowContent}>
               <Text style={styles.rowLabel}>Phone Number</Text>
@@ -81,9 +108,11 @@ export default function AccountScreen() {
             </View>
           </View>
 
+          <View style={styles.divider} />
+
           <View style={styles.row}>
             <View style={styles.iconContainer}>
-              <Ionicons name="mail-outline" size={18} color="#22c55e" />
+              <Mail size={16} color="#22c55e" strokeWidth={2} />
             </View>
             <View style={styles.rowContent}>
               <Text style={styles.rowLabel}>Email Address</Text>
@@ -92,56 +121,67 @@ export default function AccountScreen() {
           </View>
 
           {userData?.storeName && (
-            <View style={styles.row}>
-              <View style={styles.iconContainer}>
-                <Ionicons name="storefront-outline" size={18} color="#22c55e" />
+            <>
+              <View style={styles.divider} />
+              <View style={styles.row}>
+                <View style={styles.iconContainer}>
+                  <Store size={16} color="#22c55e" strokeWidth={2} />
+                </View>
+                <View style={styles.rowContent}>
+                  <Text style={styles.rowLabel}>Store Name</Text>
+                  <Text style={styles.rowValue}>{userData?.storeName}</Text>
+                </View>
               </View>
-              <View style={styles.rowContent}>
-                <Text style={styles.rowLabel}>Store Name</Text>
-                <Text style={styles.rowValue}>
-                  {userData?.storeName || "N/A"}
-                </Text>
-              </View>
-            </View>
+            </>
           )}
 
           {(userData?.storeCity || userData?.storeProvince) && (
-            <View style={styles.row}>
-              <View style={styles.iconContainer}>
-                <Ionicons name="location-outline" size={18} color="#22c55e" />
-              </View>
-              <View style={styles.rowContent}>
-                <Text style={styles.rowLabel}>Location</Text>
-                <Text style={styles.rowValue}>
-                  {[userData?.storeCity, userData?.storeProvince]
-                    .filter(Boolean)
-                    .join(", ") || "N/A"}
-                </Text>
-              </View>
-            </View>
-          )}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Pickup Areas</Text>
-          {userData !== null && (
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-              {(userData?.assignedBarangays).map(
-                (area: string, index: number) => (
-                  <Text key={index} style={styles.pills}>
-                    {area}
+            <>
+              <View style={styles.divider} />
+              <View style={styles.row}>
+                <View style={styles.iconContainer}>
+                  <MapPin size={16} color="#22c55e" strokeWidth={2} />
+                </View>
+                <View style={styles.rowContent}>
+                  <Text style={styles.rowLabel}>Location</Text>
+                  <Text style={styles.rowValue}>
+                    {[userData?.storeCity, userData?.storeProvince]
+                      .filter(Boolean)
+                      .join(", ") || "N/A"}
                   </Text>
-                ),
-              )}
-            </View>
+                </View>
+              </View>
+            </>
           )}
         </View>
 
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <AntDesign name="logout" size={20} color="#fff" />
-          <Text style={styles.logoutText}>Logout</Text>
+        {/* Pickup Areas Card */}
+        {userData?.assignedBarangays?.length > 0 && (
+          <View style={styles.card}>
+            <Text style={styles.cardSectionTitle}>Assigned Pickup Areas</Text>
+            <View style={styles.pillsContainer}>
+              {userData.assignedBarangays.map((area: string, index: number) => (
+                <View key={index} style={styles.pill}>
+                  <MapPin size={11} color="#16a34a" strokeWidth={2} />
+                  <Text style={styles.pillText}>{area}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Logout */}
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={handleLogout}
+          activeOpacity={0.85}
+        >
+          <LogOut size={18} color="#fff" strokeWidth={2} />
+          <Text style={styles.logoutText}>Sign Out</Text>
         </TouchableOpacity>
-      </View>
+
+        <View style={{ height: 32 }} />
+      </ScrollView>
     </View>
   );
 }
@@ -149,105 +189,112 @@ export default function AccountScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
-    backgroundColor: "#f5f7fa",
+    backgroundColor: "#f0fdf4",
+  },
+  headerBanner: {
+    backgroundColor: "#22c55e",
+    paddingTop: 54,
+    paddingBottom: 32,
+    alignItems: "center",
+    gap: 8,
+  },
+  avatarContainer: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: "#fff",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 4,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
+  avatarInitials: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#22c55e",
+  },
+  name: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#fff",
+    letterSpacing: 0.3,
+  },
+  roleBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "#fff",
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  roleText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#15803d",
+  },
+  scrollContent: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
   card: {
     backgroundColor: "#fff",
     borderRadius: 16,
-    padding: 20,
+    padding: 18,
+    marginBottom: 12,
     shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 5,
-    marginTop: 40,
-  },
-  header: {
-    marginBottom: 24,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e8ecf1",
-  },
-  avatarContainer: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: "#22c55e",
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#22c55e",
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.05,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
+    elevation: 2,
   },
-  headerInfo: {
-    flex: 1,
-    gap: 4,
-  },
-  name: {
-    fontSize: 22,
+  cardSectionTitle: {
+    fontSize: 12,
     fontWeight: "700",
-    color: "#2c3e50",
-  },
-  role: {
-    fontSize: 14,
-    color: "#7f8c8d",
-    fontWeight: "500",
-  },
-  infoSection: {
-    gap: 16,
-    marginBottom: 20,
+    color: "#6b7280",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    marginBottom: 16,
   },
   row: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 12,
+    paddingVertical: 4,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#f1f5f9",
+    marginVertical: 10,
   },
   iconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
     backgroundColor: "#dcfce7",
     justifyContent: "center",
     alignItems: "center",
   },
   rowContent: {
     flex: 1,
-    gap: 4,
+    gap: 2,
   },
   rowLabel: {
-    fontSize: 12,
-    color: "#7f8c8d",
-    fontWeight: "500",
+    fontSize: 11,
+    color: "#94a3b8",
+    fontWeight: "600",
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   rowValue: {
     fontSize: 15,
-    color: "#2c3e50",
+    color: "#1e293b",
     fontWeight: "500",
-  },
-  section: {
-    marginTop: 20,
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: "#e8ecf1",
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#2c3e50",
   },
   pillsContainer: {
     flexDirection: "row",
@@ -255,15 +302,18 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   pill: {
-    backgroundColor: "#dcfce7",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#f0fdf4",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: "#bbf7d0",
   },
   pillText: {
-    fontSize: 13,
+    fontSize: 12,
     color: "#16a34a",
     fontWeight: "600",
   },
@@ -271,15 +321,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#e74c3c",
-    marginTop: 24,
-    paddingVertical: 14,
-    borderRadius: 12,
+    backgroundColor: "#ef4444",
+    paddingVertical: 15,
+    borderRadius: 14,
     gap: 8,
-    shadowColor: "#e74c3c",
+    marginTop: 4,
+    shadowColor: "#ef4444",
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     elevation: 4,
   },
   logoutText: {
