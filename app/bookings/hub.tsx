@@ -116,9 +116,14 @@ export default function HubScreen() {
           const orderDetail = await axiosInstance(userData.token).get(
             `/api/orderTransactions/fetchOrderTransactionByOrderNumber?orderNumber=${data.data}&hubTransactionOriginProvince=${true}`,
           );
+          console.log("orderDetail : >> ", orderDetail.data.receiverCity);
+          console.log("userData : >> ", userData.storeCity);
+          console.log("orderDetail : >> ", orderDetail.data.orderStatus);
+          console.log("orderDetail : >> ", orderDetail.data.waybillStatus);
+          console.log("orderDetail : >> ", orderDetail.data.receiverCity);
 
           if (
-            orderDetail.data.orderStatus === "Received by branch" &&
+            orderDetail.data.orderStatus === "Received by destination hub" &&
             orderDetail.data.waybillStatus === "In Transit" &&
             orderDetail.data?.hubTransaction.origin === "Provincial Office" &&
             orderDetail.data.receiverCity === userData.storeCity

@@ -91,7 +91,7 @@ export default function RtsFromHub() {
           }
 
           // Validate RTS status
-          if (orderDetail.data.rtsStatus !== "Received by hub") {
+          if (orderDetail.data.rtsStatus !== "Arrived at Origin Hub") {
             setScanResultMessage(
               orderDetail.data.rtsStatus
                 ? `Cannot scan: Item status is "${orderDetail.data.rtsStatus}". Only items with "Received by hub" status can be scanned.`
