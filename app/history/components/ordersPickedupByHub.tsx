@@ -16,15 +16,16 @@ import {
 } from "react-native";
 import BottomDrawer from "react-native-animated-bottom-drawer";
 import { Ionicons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
 type clientHistoryData = any;
 const SheetItem = ({ label, value }: { label: string; value?: any }) => (
   <View style={{ marginBottom: 12 }}>
-    <Text style={{ fontSize: 11, color: "#7f8c8d", fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</Text>
-    <Text style={{ fontSize: 15, fontWeight: "600", color: "#2c3e50", marginTop: 4 }}>{value ?? "-"}</Text>
+    <Text style={{ fontSize: 11, color: "#64748B", fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</Text>
+    <Text style={{ fontSize: 15, fontWeight: "600", color: "#0F172A", marginTop: 4 }}>{value ?? "-"}</Text>
   </View>
 );
 const Divider = () => (
-  <View style={{ height: 1, backgroundColor: "#e8ecf1", marginVertical: 16 }} />
+  <View style={{ height: 1, backgroundColor: "#F1F5F9", marginVertical: 16 }} />
 );
 export default function clientHistoryt() {
   const bottomDrawerRef = useRef<any>(null);
@@ -42,10 +43,27 @@ export default function clientHistoryt() {
   const [searchResult, setSearchResult] = useState("");
   const [dataLoading, setDataLoading] = useState(false);
 
-  const { orderData } = useLocalSearchParams();
+  const { orderData, filter } = useLocalSearchParams();
   const clientInfo: clientHistoryData = orderData
     ? JSON.parse(orderData as string)
     : null;
+  const activeFilter = (filter as string) || "all";
+
+  const filteredBookings =
+    activeFilter === "picked-up"
+      ? bookings.filter((b: any) => b.orderStatus === "Picked up by Rider")
+      : activeFilter === "dropped-off"
+        ? bookings.filter(
+            (b: any) => !!b.orderStatus && b.orderStatus !== "Picked up by Rider",
+          )
+        : bookings;
+
+  const filterLabel =
+    activeFilter === "picked-up"
+      ? "Picked up"
+      : activeFilter === "dropped-off"
+        ? "Dropped off"
+        : "All";
 
   const openBottomDrawer = (item: clientHistoryData) => {
     setSelectedItem(item);
@@ -79,34 +97,34 @@ export default function clientHistoryt() {
         activeOpacity={0.7}
       >
         <View style={styles.cardIconContainer}>
-          <Ionicons name="cube" size={22} color="#22c55e" />
+          <Ionicons name="cube" size={22} color="#00BF63" />
         </View>
         <View style={styles.cardContent}>
           <Text style={styles.cardTitle}>{item.waybillNumber}</Text>
           <View style={styles.cardDetailRow}>
-            <Ionicons name="person-outline" size={14} color="#7f8c8d" />
+            <Ionicons name="person-outline" size={14} color="#64748B" />
             <Text style={styles.cardDetail}>{item.receiverName}</Text>
           </View>
           <View style={styles.cardDetailRow}>
-            <Ionicons name="cash-outline" size={14} color="#7f8c8d" />
+            <Ionicons name="cash-outline" size={14} color="#64748B" />
             <Text style={styles.cardDetail}>COD: ₱{item.codValue || 0}</Text>
           </View>
           <View style={styles.infoRow}>
             <View style={styles.infoItem}>
-              <Ionicons name="scale-outline" size={12} color="#95a5a6" />
+              <Ionicons name="scale-outline" size={12} color="#64748B" />
               <Text style={styles.infoText}>{item.itemWeight}kg</Text>
             </View>
             <View style={styles.infoItem}>
-              <Ionicons name="layers-outline" size={12} color="#95a5a6" />
+              <Ionicons name="layers-outline" size={12} color="#64748B" />
               <Text style={styles.infoText}>{item.numberOfItem} items</Text>
             </View>
             <View style={styles.infoItem}>
-              <Ionicons name="calendar-outline" size={12} color="#95a5a6" />
+              <Ionicons name="calendar-outline" size={12} color="#64748B" />
               <Text style={styles.infoText}>{moment(item.scannedDate).format("MMM DD")}</Text>
             </View>
           </View>
         </View>
-        <Ionicons name="chevron-forward" size={20} color="#bdc3c7" />
+        <Ionicons name="chevron-forward" size={20} color="#94A3B8" />
       </TouchableOpacity>
     );
   };
@@ -129,7 +147,7 @@ export default function clientHistoryt() {
   }, [user]);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.headerSection}>
         <View style={styles.pickupCard}>
           <View style={styles.pickupHeader}>
@@ -141,7 +159,7 @@ export default function clientHistoryt() {
               <Text style={styles.pickupName}>{bookings[0]?.senderName || "Loading..."}</Text>
               {bookings[0] && (
                 <View style={styles.addressRow}>
-                  <Ionicons name="pin-outline" size={14} color="#d1fae5" />
+                  <Ionicons name="pin-outline" size={14} color="#00BF6315" />
                   <Text style={styles.pickupAddress}>
                     {`${bookings[0].senderBarangay}, ${bookings[0].senderCity}, ${bookings[0].senderProvince}`}
                   </Text>
@@ -150,8 +168,8 @@ export default function clientHistoryt() {
             </View>
           </View>
           <View style={styles.countBadge}>
-            <Text style={styles.countLabel}>Total Bookings</Text>
-            <Text style={styles.countValue}>{bookings.length}</Text>
+            <Text style={styles.countLabel}>{filterLabel}</Text>
+            <Text style={styles.countValue}>{filteredBookings.length}</Text>
           </View>
         </View>
       </View>
@@ -159,12 +177,12 @@ export default function clientHistoryt() {
       <View style={styles.listSection}>
         {bookingsLoading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#22c55e" />
+            <ActivityIndicator size="large" color="#00BF63" />
             <Text style={styles.loadingText}>Loading bookings...</Text>
           </View>
         ) : (
           <FlatList
-            data={bookings}
+            data={filteredBookings}
             keyExtractor={(item, idx) =>
               String(item?.id ?? item?.bookingId ?? idx)
             }
@@ -173,8 +191,10 @@ export default function clientHistoryt() {
             ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
-                <Ionicons name="cube-outline" size={48} color="#bdc3c7" />
-                <Text style={styles.emptyText}>No bookings found</Text>
+                <Ionicons name="cube-outline" size={48} color="#94A3B8" />
+                <Text style={styles.emptyText}>
+                  No {filterLabel.toLowerCase()} bookings found
+                </Text>
               </View>
             }
           />
@@ -191,7 +211,7 @@ export default function clientHistoryt() {
           {selectedItem && (
             <View style={styles.drawerContent}>
               <View style={styles.drawerTitle}>
-                <Ionicons name="document-text" size={20} color="#22c55e" />
+                <Ionicons name="document-text" size={20} color="#00BF63" />
                 <Text style={styles.drawerTitleText}>Booking Details</Text>
               </View>
               <View style={styles.items}>
@@ -281,24 +301,24 @@ export default function clientHistoryt() {
           )}
         </ScrollView>
       </BottomDrawer>
-    </View>
+    </SafeAreaView>
   );
 }
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f7fa",
+    backgroundColor: "#F8FAFC",
   },
   headerSection: {
     padding: 20,
-    paddingTop: 50,
+    paddingTop: 16,
     paddingBottom: 16,
   },
   pickupCard: {
-    backgroundColor: "#22c55e",
+    backgroundColor: "#00BF63",
     borderRadius: 16,
     padding: 20,
-    shadowColor: "#22c55e",
+    shadowColor: "#00BF63",
     shadowOpacity: 0.3,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
@@ -324,7 +344,7 @@ const styles = StyleSheet.create({
   },
   pickupLabel: {
     fontSize: 12,
-    color: "#d1fae5",
+    color: "#00BF6315",
     fontWeight: "600",
     textTransform: "uppercase",
     letterSpacing: 1,
@@ -342,7 +362,7 @@ const styles = StyleSheet.create({
   },
   pickupAddress: {
     fontSize: 13,
-    color: "#d1fae5",
+    color: "#00BF6315",
     flex: 1,
   },
   countBadge: {
@@ -355,7 +375,7 @@ const styles = StyleSheet.create({
   },
   countLabel: {
     fontSize: 12,
-    color: "#d1fae5",
+    color: "#00BF6315",
     fontWeight: "600",
     marginBottom: 4,
   },
@@ -378,7 +398,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    shadowColor: "#000",
+    shadowColor: "#0F172A",
     shadowOpacity: 0.05,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
@@ -388,7 +408,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#dcfce7",
+    backgroundColor: "#00BF6315",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -399,7 +419,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 15,
     fontWeight: "700",
-    color: "#2c3e50",
+    color: "#0F172A",
   },
   cardDetailRow: {
     flexDirection: "row",
@@ -408,7 +428,7 @@ const styles = StyleSheet.create({
   },
   cardDetail: {
     fontSize: 13,
-    color: "#7f8c8d",
+    color: "#64748B",
   },
   infoRow: {
     flexDirection: "row",
@@ -422,7 +442,7 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 11,
-    color: "#95a5a6",
+    color: "#64748B",
   },
   loadingContainer: {
     padding: 40,
@@ -432,7 +452,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: "#7f8c8d",
+    color: "#64748B",
   },
   emptyContainer: {
     padding: 40,
@@ -442,12 +462,12 @@ const styles = StyleSheet.create({
   emptyText: {
     marginTop: 12,
     fontSize: 14,
-    color: "#7f8c8d",
+    color: "#64748B",
   },
   drawerHandle: {
     width: 40,
     height: 4,
-    backgroundColor: "#e8ecf1",
+    backgroundColor: "#F1F5F9",
     borderRadius: 2,
     alignSelf: "center",
     marginTop: 8,
@@ -465,7 +485,7 @@ const styles = StyleSheet.create({
   drawerTitleText: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#2c3e50",
+    color: "#0F172A",
   },
   items: {
     flexDirection: "row",
@@ -482,7 +502,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: "bold",
-    color: "#4ade80",
+    color: "#00BF63",
   },
   subtitle: {
     fontSize: 16,

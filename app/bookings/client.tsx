@@ -119,18 +119,18 @@ export default function ClientScreen() {
         activeOpacity={0.7}
       >
         <View style={styles.cardIconContainer}>
-          <Ionicons name="business" size={22} color="#22c55e" />
+          <Ionicons name="business" size={22} color="#00BF63" />
         </View>
         <View style={styles.cardContent}>
           <Text style={styles.cardTitle}>{item.clientName}</Text>
           <View style={styles.cardDetailRow}>
-            <Ionicons name="location-outline" size={14} color="#7f8c8d" />
+            <Ionicons name="location-outline" size={14} color="#64748B" />
             <Text style={styles.cardAddress} numberOfLines={2}>
               {item.address}
             </Text>
           </View>
         </View>
-        <Ionicons name="chevron-forward" size={20} color="#bdc3c7" />
+        <Ionicons name="chevron-forward" size={20} color="#94A3B8" />
       </TouchableOpacity>
     );
   };
@@ -142,7 +142,7 @@ export default function ClientScreen() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Ionicons name="chevron-back" size={24} color="#22c55e" />
+          <Ionicons name="chevron-back" size={24} color="#00BF63" />
         </TouchableOpacity>
         <View style={styles.headerTextContainer}>
           <Text style={styles.title}>Client Bookings </Text>
@@ -152,19 +152,19 @@ export default function ClientScreen() {
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#22c55e" />
+          <ActivityIndicator size="large" color="#00BF63" />
           <Text style={styles.loadingText}>Loading bookings...</Text>
         </View>
       ) : error ? (
         <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle" size={48} color="#e74c3c" />
+          <Ionicons name="alert-circle" size={48} color="#EF4444" />
           <Text style={styles.errorText}>Something went wrong</Text>
           <Text style={styles.errorSubtext}>{error}</Text>
         </View>
       ) : remittanceCheckerData ? (
         <View style={styles.remittanceContainer}>
           <View style={styles.remittanceCard}>
-            <FontAwesome name="exclamation-circle" size={22} color="red" />
+            <Ionicons name="alert-circle" size={22} color="#EF4444" />
             <Text style={styles.remittanceTitle}>Remittance Required</Text>
             <Text style={styles.remittanceMessage}>
               Remittance balance must be remitted before you can access client
@@ -186,7 +186,7 @@ export default function ClientScreen() {
           ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Ionicons name="folder-open-outline" size={48} color="#bdc3c7" />
+              <Ionicons name="folder-open-outline" size={48} color="#94A3B8" />
               <Text style={styles.emptyText}>No bookings available</Text>
             </View>
           }
@@ -199,7 +199,7 @@ export default function ClientScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f7fa",
+    backgroundColor: "#F8FAFC",
   },
   header: {
     flexDirection: "row",
@@ -222,11 +222,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: "700",
-    color: "#2c3e50",
+    color: "#0F172A",
   },
   subtitle: {
     fontSize: 13,
-    color: "#7f8c8d",
+    color: "#64748B",
     marginTop: 2,
   },
   listContent: {
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#dcfce7",
+    backgroundColor: "#00BF6315",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#2c3e50",
+    color: "#0F172A",
   },
   cardDetailRow: {
     flexDirection: "row",
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
   },
   cardAddress: {
     fontSize: 13,
-    color: "#7f8c8d",
+    color: "#64748B",
     flex: 1,
   },
   loadingContainer: {
@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: "#7f8c8d",
+    color: "#64748B",
   },
   errorContainer: {
     flex: 1,
@@ -289,12 +289,12 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 16,
     fontWeight: "600",
-    color: "#e74c3c",
+    color: "#EF4444",
   },
   errorSubtext: {
     marginTop: 8,
     fontSize: 14,
-    color: "#95a5a6",
+    color: "#64748B",
     textAlign: "center",
   },
   emptyContainer: {
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
   emptyText: {
     marginTop: 12,
     fontSize: 14,
-    color: "#7f8c8d",
+    color: "#64748B",
   },
   content: {
     marginTop: 40,
@@ -338,19 +338,19 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 18,
     fontWeight: "700",
-    color: "red",
+    color: "#EF4444",
   },
   remittanceMessage: {
     marginTop: 8,
     fontSize: 14,
     textAlign: "center",
-    color: "red",
+    color: "#EF4444",
     lineHeight: 20,
   },
   remittanceSupport: {
     marginTop: 6,
     fontSize: 13,
     textAlign: "center",
-    color: "red",
+    color: "#EF4444",
   },
 });

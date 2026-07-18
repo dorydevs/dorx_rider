@@ -1,3 +1,4 @@
+import { DrawerHeader } from "@/components/DrawerHeader";
 import { useAppSelector } from "@/store/hooks";
 import axiosInstance from "@/utils/axiosInstance";
 import { Ionicons } from "@expo/vector-icons";
@@ -55,7 +56,7 @@ export default function CustomerHistoryScreen() {
         activeOpacity={0.7}
       >
         <View style={styles.cardIconContainer}>
-          <Ionicons name="person" size={20} color="#22c55e" />
+          <Ionicons name="person" size={20} color="#00BF63" />
         </View>
         <View style={styles.cardContent}>
           <Text style={styles.cardTitle}>{receiverName}</Text>
@@ -144,7 +145,7 @@ export default function CustomerHistoryScreen() {
                   "Customer"}
               </Text>
               <View style={styles.addressRow}>
-                <Ionicons name="cube-outline" size={14} color="#d1fae5" />
+                <Ionicons name="cube-outline" size={14} color="#00BF6315" />
                 <Text style={styles.clientAddress}>
                   Total scanned:{" "}
                   {customerInfo?.total ?? customerInfo?.totalPickedUp ?? 0}
@@ -164,7 +165,7 @@ export default function CustomerHistoryScreen() {
 
         {dataLoading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#22c55e" />
+            <ActivityIndicator size="large" color="#00BF63" />
             <Text style={styles.loadingText}>Loading...</Text>
           </View>
         ) : (
@@ -184,7 +185,7 @@ export default function CustomerHistoryScreen() {
                   <Ionicons
                     name="folder-open-outline"
                     size={36}
-                    color="#22c55e"
+                    color="#00BF63"
                   />
                 </View>
                 <Text style={styles.emptyText}>No transactions found</Text>
@@ -207,28 +208,15 @@ export default function CustomerHistoryScreen() {
         gestureMode="none"
       >
         <View style={{ flex: 1 }}>
-          {/* Drawer Header - fixed at top */}
-          <View style={styles.drawerHeader}>
-            <View style={styles.drawerIconContainer}>
-              <Ionicons name="person" size={24} color="#22c55e" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.drawerName}>{receiverFullName}</Text>
-              <Text style={styles.drawerOrderNumber}>
-                {selectedOrder?.orderNumber ??
-                  selectedOrder?.waybillNumber ??
-                  ""}
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={styles.drawerCloseBtn}
-              onPress={() => bottomDrawerRef.current?.close()}
-            >
-              <Ionicons name="close" size={20} color="#64748B" />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.drawerDivider} />
+          <DrawerHeader
+            title={receiverFullName}
+            subtitle={
+              selectedOrder?.orderNumber ?? selectedOrder?.waybillNumber ?? ""
+            }
+            icon={<Ionicons name="person" size={22} color="#00BF63" />}
+            onClose={() => bottomDrawerRef.current?.close()}
+            showHandle={false}
+          />
 
           {/* Scrollable content */}
           <ScrollView
@@ -342,10 +330,10 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8FAFC" },
   headerSection: { padding: 16, paddingTop: 12 },
   clientCard: {
-    backgroundColor: "#22c55e",
+    backgroundColor: "#00BF63",
     borderRadius: 16,
     padding: 20,
-    shadowColor: "#16a34a",
+    shadowColor: "#00BF63",
     shadowOpacity: 0.3,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
@@ -363,7 +351,7 @@ const styles = StyleSheet.create({
   clientInfo: { flex: 1, gap: 4 },
   clientLabel: {
     fontSize: 12,
-    color: "#d1fae5",
+    color: "#00BF6315",
     fontWeight: "600",
     textTransform: "uppercase",
     letterSpacing: 1,
@@ -375,7 +363,7 @@ const styles = StyleSheet.create({
     gap: 4,
     marginTop: 2,
   },
-  clientAddress: { fontSize: 13, color: "#d1fae5", flex: 1 },
+  clientAddress: { fontSize: 13, color: "#00BF6315", flex: 1 },
   listSection: { flex: 1, paddingHorizontal: 16, marginBottom: 8 },
   listHeader: {
     flexDirection: "row",
@@ -404,7 +392,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: "#DCFCE7",
+    backgroundColor: "#00BF6315",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -429,7 +417,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: "#DCFCE7",
+    backgroundColor: "#00BF6315",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 12,
@@ -445,31 +433,6 @@ const styles = StyleSheet.create({
   // DRAWER
   drawerScroll: { flex: 1, maxHeight: 580 },
   drawerContent: { paddingBottom: 40 },
-  drawerHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    padding: 20,
-    paddingBottom: 16,
-  },
-  drawerIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: "#DCFCE7",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  drawerName: { fontSize: 16, fontWeight: "700", color: "#0F172A" },
-  drawerOrderNumber: { fontSize: 13, color: "#64748B", marginTop: 2 },
-  drawerCloseBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: "#F1F5F9",
-    justifyContent: "center",
-    alignItems: "center",
-  },
   drawerDivider: {
     height: 1,
     backgroundColor: "#F1F5F9",
@@ -494,10 +457,10 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   statusBadge: {
-    backgroundColor: "#DCFCE7",
+    backgroundColor: "#00BF6315",
     paddingHorizontal: 10,
     paddingVertical: 3,
     borderRadius: 20,
   },
-  statusText: { fontSize: 12, fontWeight: "600", color: "#16a34a" },
+  statusText: { fontSize: 12, fontWeight: "600", color: "#00BF63" },
 });

@@ -1,3 +1,5 @@
+import { DrawerHeader } from "@/components/DrawerHeader";
+import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
   ActivityIndicator,
@@ -37,119 +39,115 @@ const DeliveryAttemptFloatPanel: React.FC<DeliveryAttemptFloatPanelProps> = ({
       initialHeight={560}
       enableSnapping={false}
     >
-      <View style={styles.overlay}>
-        <ScrollView style={styles.container}>
-          {/* Order Card */}
-          <View style={styles.card}>
-            <Text style={styles.boldText}>{orderInfo?.itemName}</Text>
-            <Text>{orderInfo?.orderNumber}</Text>
-
-            <View style={styles.divider} />
-
-            <View style={styles.row}>
-              <Text>COD Value: </Text>
-              <Text>{orderInfo?.codValue}</Text>
-
-              <View style={styles.verticalDivider} />
-
-              <Text>Item Weight: </Text>
-              <Text>{orderInfo?.itemWeight}</Text>
-            </View>
-
-            <Text>Number of Item: {orderInfo?.numberOfItem}</Text>
-
-            <Text>
-              Recipient:{" "}
-              {`${orderInfo?.receiverFirstName} ${orderInfo?.receiverMiddleName} ${orderInfo?.receiverLastName}`}
-            </Text>
-
-            <Text>Phone: {orderInfo?.receiverPhone}</Text>
+      <DrawerHeader
+        title={orderInfo?.itemName || "Delivery Attempt"}
+        subtitle={orderInfo?.orderNumber}
+        icon={<Ionicons name="cube" size={22} color="#00BF63" />}
+        onClose={onCloseFloatPanel}
+      />
+      <ScrollView contentContainerStyle={styles.container}>
+        {/* Order Card */}
+        <View style={styles.card}>
+          <View style={styles.row}>
+            <Ionicons name="cash-outline" size={16} color="#94A3B8" />
+            <Text style={styles.label}>COD Value</Text>
+            <Text style={styles.value}>{orderInfo?.codValue}</Text>
           </View>
+          <View style={styles.row}>
+            <Ionicons name="scale-outline" size={16} color="#94A3B8" />
+            <Text style={styles.label}>Item Weight</Text>
+            <Text style={styles.value}>{orderInfo?.itemWeight}</Text>
+          </View>
+          <View style={styles.row}>
+            <Ionicons name="layers-outline" size={16} color="#94A3B8" />
+            <Text style={styles.label}>Number of Items</Text>
+            <Text style={styles.value}>{orderInfo?.numberOfItem}</Text>
+          </View>
+          <View style={styles.row}>
+            <Ionicons name="person-outline" size={16} color="#94A3B8" />
+            <Text style={styles.label}>Recipient</Text>
+            <Text style={styles.value} numberOfLines={1}>
+              {`${orderInfo?.receiverFirstName ?? ""} ${orderInfo?.receiverMiddleName ?? ""} ${orderInfo?.receiverLastName ?? ""}`}
+            </Text>
+          </View>
+          <View style={styles.row}>
+            <Ionicons name="call-outline" size={16} color="#94A3B8" />
+            <Text style={styles.label}>Phone</Text>
+            <Text style={styles.value}>{orderInfo?.receiverPhone}</Text>
+          </View>
+        </View>
 
-          {/* Status Area */}
-          {loading ? (
-            <View style={styles.center}>
-              <ActivityIndicator size="large" />
-              <Text style={{ marginTop: 8 }}>Updating...</Text>
-            </View>
-          ) : success ? (
-            <View style={styles.center}>
-              <Text style={styles.successText}>✅</Text>
-              <Text>{successMessage}</Text>
-            </View>
-          ) : (
-            <>
-              <TouchableOpacity
-                style={[styles.button, styles.successButton]}
-                onPress={() => onUpdateWaybillStatus("Delivered")}
-              >
-                <Text style={styles.buttonText}>Mark As Delivered</Text>
-              </TouchableOpacity>
+        {/* Status Area */}
+        {loading ? (
+          <View style={styles.center}>
+            <ActivityIndicator size="large" color="#00BF63" />
+            <Text style={{ marginTop: 8 }}>Updating...</Text>
+          </View>
+        ) : success ? (
+          <View style={styles.center}>
+            <Text style={styles.successText}>✅</Text>
+            <Text>{successMessage}</Text>
+          </View>
+        ) : (
+          <>
+            <TouchableOpacity
+              style={[styles.button, styles.successButton]}
+              onPress={() => onUpdateWaybillStatus("Delivered")}
+            >
+              <Text style={styles.buttonText}>Mark As Delivered</Text>
+            </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[styles.button, styles.warningButton]}
-                onPress={() => setRemarksModal(true)}
-              >
-                <Text style={styles.buttonText}>Mark As For Return</Text>
-              </TouchableOpacity>
-            </>
-          )}
+            <TouchableOpacity
+              style={[styles.button, styles.warningButton]}
+              onPress={() => setRemarksModal(true)}
+            >
+              <Text style={styles.buttonText}>Mark As For Return</Text>
+            </TouchableOpacity>
+          </>
+        )}
 
-          {/* Close Button */}
-          <TouchableOpacity
-            style={[styles.button, styles.closeButton]}
-            onPress={onCloseFloatPanel}
-            disabled={loading}
-          >
-            <Text style={styles.buttonText}>Close</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </View>
+        {/* Close Button */}
+        <TouchableOpacity
+          style={[styles.button, styles.closeButton]}
+          onPress={onCloseFloatPanel}
+          disabled={loading}
+        >
+          <Text style={styles.buttonText}>Close</Text>
+        </TouchableOpacity>
+      </ScrollView>
     </BottomDrawer>
   );
 };
 
 export default DeliveryAttemptFloatPanel;
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "flex-end",
-  },
   container: {
-    backgroundColor: "#fff",
-    padding: 16,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-    minHeight: "40%",
+    padding: 20,
   },
   card: {
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: "#F1F5F9",
     marginBottom: 16,
-  },
-  boldText: {
-    fontWeight: "bold",
-    fontSize: 16,
-    marginBottom: 4,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: "#e5e7eb",
-    marginVertical: 10,
-  },
-  verticalDivider: {
-    width: 1,
-    height: 14,
-    backgroundColor: "#e5e7eb",
-    marginHorizontal: 8,
+    gap: 12,
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 4,
+    gap: 10,
+  },
+  label: {
+    fontSize: 14,
+    color: "#64748B",
+    flex: 1,
+  },
+  value: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#0F172A",
+    flexShrink: 1,
+    textAlign: "right",
   },
   center: {
     alignItems: "center",
@@ -162,13 +160,13 @@ const styles = StyleSheet.create({
     marginVertical: 6,
   },
   successButton: {
-    backgroundColor: "#22c55e",
+    backgroundColor: "#00BF63",
   },
   warningButton: {
-    backgroundColor: "#f59e0b",
+    backgroundColor: "#F59E0B",
   },
   closeButton: {
-    backgroundColor: "#6b7280",
+    backgroundColor: "#64748B",
     marginTop: 20,
   },
   buttonText: {

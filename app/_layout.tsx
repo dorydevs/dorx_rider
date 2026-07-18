@@ -13,6 +13,7 @@ import messaging, {
 import { Stack } from "expo-router";
 import { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Provider } from "react-redux";
 import "../firebase";
 
@@ -137,10 +138,12 @@ function SocketManager() {
 
 export default function RootLayout() {
   return (
-    <Provider store={store}>
-      <SocketManager />
-      <Stack screenOptions={{ headerShown: false }} />
-    </Provider>
+    <SafeAreaProvider>
+      <Provider store={store}>
+        <SocketManager />
+        <Stack screenOptions={{ headerShown: false }} />
+      </Provider>
+    </SafeAreaProvider>
   );
 }
 
@@ -150,7 +153,7 @@ const styles = StyleSheet.create({
     top: 50,
     left: 20,
     right: 20,
-    backgroundColor: "#22c55e",
+    backgroundColor: "#00BF63",
     borderRadius: 12,
     padding: 14,
     flexDirection: "row",
@@ -158,7 +161,7 @@ const styles = StyleSheet.create({
     gap: 10,
     zIndex: 999,
     elevation: 10,
-    shadowColor: "#000",
+    shadowColor: "#0F172A",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,

@@ -1,8 +1,7 @@
 import { useAppSelector } from "@/store/hooks";
 import axiosInstance from "@/utils/axiosInstance";
 import socket from "@/utils/socket";
-import Feather from "@expo/vector-icons/Feather";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useIsFocused } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -206,7 +205,7 @@ export default function clientScheduledToPickUp() {
           <View style={styles.cardInfo}>
             {/* <Text style={styles.orderNumber}>{item.orderNumber}</Text> */}
             <View style={styles.row}>
-              <Feather name="calendar" size={13} color="#7f8c8d" />
+              <Ionicons name="calendar-outline" size={13} color="#64748B" />
               <Text style={styles.dateText}>
                 {item.date
                   ? new Date(item.date).toLocaleDateString("en-US", {
@@ -221,10 +220,10 @@ export default function clientScheduledToPickUp() {
               Total Items: {item.totalItems}
             </Text>
           </View>
-          <FontAwesome
-            name="chevron-right"
+          <Ionicons
+            name="chevron-forward"
             size={16}
-            color={canNavigate ? "#22c55e" : "#bdc3c7"}
+            color={canNavigate ? "#00BF63" : "#94A3B8"}
           />
         </TouchableOpacity>
 
@@ -242,7 +241,7 @@ export default function clientScheduledToPickUp() {
             </View>
           ) : isTaken || isAlreadyAccepted ? (
             <View style={[styles.acceptButton, styles.acceptButtonTaken]}>
-              <FontAwesome name="lock" size={14} color="#94a3b8" />
+              <Ionicons name="lock-closed" size={14} color="#94A3B8" />
               <Text style={styles.acceptButtonTakenText}>
                 Booking is already accepted
               </Text>
@@ -261,7 +260,7 @@ export default function clientScheduledToPickUp() {
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
                 <>
-                  <FontAwesome name="check-circle" size={15} color="#fff" />
+                  <Ionicons name="checkmark-circle" size={15} color="#fff" />
                   <Text style={styles.acceptButtonText}>Accept Pickup</Text>
                 </>
               )}
@@ -281,7 +280,7 @@ export default function clientScheduledToPickUp() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <FontAwesome name="chevron-left" size={24} color="#22c55e" />
+          <Ionicons name="chevron-back" size={24} color="#00BF63" />
         </TouchableOpacity>
         <Text style={styles.title}>Client Scheduled to Pick up</Text>
       </View>
@@ -313,7 +312,7 @@ export default function clientScheduledToPickUp() {
 
       {loading ? (
         <View style={{ padding: 20 }}>
-          <ActivityIndicator size="large" color="#22c55e" />
+          <ActivityIndicator size="large" color="#00BF63" />
         </View>
       ) : (
         <FlatList
@@ -336,7 +335,7 @@ const styles = StyleSheet.create({
     padding: 20,
     marginTop: 20,
     borderRadius: 12,
-    backgroundColor: "#22c55e",
+    backgroundColor: "#00BF63",
     elevation: 2,
     flexDirection: "row",
     justifyContent: "space-between",
@@ -358,41 +357,41 @@ const styles = StyleSheet.create({
   orderNumber: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#1e293b",
+    color: "#1E293B",
     marginBottom: 2,
   },
   row: { flexDirection: "row", alignItems: "center", gap: 6 },
-  dateText: { fontSize: 13, color: "#7f8c8d" },
-  totalItems: { fontSize: 13, color: "#7f8c8d" },
-  divider: { height: 1, backgroundColor: "#f1f5f9", marginHorizontal: 16 },
+  dateText: { fontSize: 13, color: "#64748B" },
+  totalItems: { fontSize: 13, color: "#64748B" },
+  divider: { height: 1, backgroundColor: "#F1F5F9", marginHorizontal: 16 },
   cardBottom: { paddingHorizontal: 16, paddingVertical: 12 },
   acceptButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "#22c55e",
+    backgroundColor: "#00BF63",
     paddingVertical: 10,
     borderRadius: 10,
   },
-  acceptButtonDisabled: { backgroundColor: "#86efac" },
+  acceptButtonDisabled: { backgroundColor: "#CBD5E1" },
   acceptButtonText: { color: "#fff", fontWeight: "700", fontSize: 14 },
-  acceptButtonTaken: { backgroundColor: "#f1f5f9" },
-  acceptButtonTakenText: { color: "#94a3b8", fontWeight: "600", fontSize: 14 },
+  acceptButtonTaken: { backgroundColor: "#F1F5F9" },
+  acceptButtonTakenText: { color: "#94A3B8", fontWeight: "600", fontSize: 14 },
   statusRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   dot_green: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#22c55e",
+    backgroundColor: "#00BF63",
   },
-  statusTextGreen: { fontSize: 13, fontWeight: "600", color: "#16a34a" },
+  statusTextGreen: { fontSize: 13, fontWeight: "600", color: "#00BF63" },
   backButton: {
     width: 40,
     height: 40,
     justifyContent: "center",
     marginRight: -10,
   },
-  title: { fontSize: 15, fontWeight: "bold", color: "#22c55e" },
+  title: { fontSize: 15, fontWeight: "bold", color: "#00BF63" },
   subtitle: { fontSize: 16, opacity: 0.7, marginBottom: 30 },
 });

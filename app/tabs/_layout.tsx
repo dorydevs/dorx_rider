@@ -1,28 +1,26 @@
-import { Colors } from "@/constants/theme";
-import { useColorScheme } from "@/hooks/use-color-scheme";
-import AntDesign from "@expo/vector-icons/AntDesign";
-import Feather from "@expo/vector-icons/Feather";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
-import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
+import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import React from "react";
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
+        tabBarActiveTintColor: "#00BF63",
+        tabBarInactiveTintColor: "#94A3B8",
         headerShown: false,
+        tabBarStyle: {
+          backgroundColor: "#fff",
+          borderTopColor: "#F1F5F9",
+        },
       }}
     >
       <Tabs.Screen
         name="bookings"
         options={{
           title: "Bookings",
-          tabBarIcon: ({ color }) => (
-            <Feather size={18} name="calendar" color={color} />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="calendar" size={size} color={color} />
           ),
         }}
       />
@@ -31,9 +29,11 @@ export default function TabLayout() {
         name="scan"
         options={{
           title: "Scan",
-          tabBarIcon: ({ color }) => (
-            <FontAwesome5 size={18} name="qrcode" color={color} />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="qr-code" size={size} color={color} />
           ),
+          href: null,
+          popToTopOnBlur: true,
         }}
       />
 
@@ -41,8 +41,8 @@ export default function TabLayout() {
         name="history"
         options={{
           title: "History",
-          tabBarIcon: ({ color }) => (
-            <AntDesign size={18} name="history" color={color} />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="time" size={size} color={color} />
           ),
         }}
       />
@@ -51,8 +51,8 @@ export default function TabLayout() {
         name="account"
         options={{
           title: "Account",
-          tabBarIcon: ({ color }) => (
-            <FontAwesome size={18} name="user-o" color={color} />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person" size={size} color={color} />
           ),
         }}
       />

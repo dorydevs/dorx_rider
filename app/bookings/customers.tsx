@@ -1,8 +1,15 @@
 import AnimatedDrawer from "@/components/AnimatedDrawer";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
+import { DrawerHeader } from "@/components/DrawerHeader";
+import { ScanDetailCard, ScanDetailCardProps } from "@/components/ScanDetailCard";
+import { ScanResultAlert } from "@/components/ScanResultAlert";
 import { useScannerSounds } from "@/components/ScannerSounds";
+import { ScanStatsCard } from "@/components/ScanStatsCard";
+import { ScanStatusBar } from "@/components/ScanStatusBar";
+import { ScreenHeader } from "@/components/ScreenHeader";
 import { useAppSelector } from "@/store/hooks";
 import axiosInstance from "@/utils/axiosInstance";
+import { formatDestination, formatScanTime } from "@/utils/scanFormatting";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
@@ -35,17 +42,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import ViewShot, { captureRef } from "react-native-view-shot";
 
 const { width: any } = Dimensions.get("window");
-
-const ALERT_COLORS: Record<
-  string,
-  { border: string; bg: string; text: string }
-> = {
-  green: { border: "#16a34a", bg: "#22c55e", text: "#ffffff" },
-  red: { border: "#dc2626", bg: "#dc2626", text: "#ffffff" },
-  yellow: { border: "#d97706", bg: "#f59e0b", text: "#ffffff" },
-  blue: { border: "#16a34a", bg: "#22c55e", text: "#ffffff" },
-  orange: { border: "#ea580c", bg: "#f97316", text: "#ffffff" },
-};
 
 export default function CustomersScreen() {
   const router = useRouter();
@@ -92,6 +88,10 @@ export default function CustomersScreen() {
     longitude: number;
   } | null>(null);
   const [scanCount, setScanCount] = useState(0);
+  const [scannedOrderDetails, setScannedOrderDetails] = useState<Omit<
+    ScanDetailCardProps,
+    "visible"
+  > | null>(null);
 
   const bottomDrawerRef = useRef<any>(null);
   const cameraButtomDrawer = useRef<any>(null);
@@ -293,9 +293,25 @@ export default function CustomersScreen() {
               setScanResultMessage("Successfully Scanned!");
               setAlertColor("green");
               setScanCount((prev) => prev + 1);
+              setScannedOrderDetails({
+                waybillNumber: data?.data,
+                parcelStatus: waybillData.waybillStatus,
+                senderName: waybillData.senderName,
+                receiverName: waybillData.receiverName,
+                destination: formatDestination(
+                  waybillData.receiverBarangay,
+                  waybillData.receiverCity,
+                  waybillData.receiverProvince,
+                ),
+                scanTime: formatScanTime(moment()),
+              });
             } else {
               setInvalid(true);
               setAlertColor("red");
+              setScanResultMessage(
+                `Cannot scan: Receiver barangay "${waybillData.receiverBarangay}" is not in your assigned areas.`,
+              );
+              setScannedOrderDetails(null);
               playError();
             }
           } else {
@@ -325,6 +341,9 @@ export default function CustomersScreen() {
           setTimeout(() => {
             setScanned(false);
             setData("");
+            setInvalid(false);
+            setScanResultMessage("");
+            setScannedOrderDetails(null);
           }, 5000);
         }
       }
@@ -479,7 +498,14 @@ export default function CustomersScreen() {
         <Text style={styles.message}>
           We need your permission to show the camera
         </Text>
-        <Button onPress={requestPermission}>grant permission</Button>
+        <Button
+          onPress={requestPermission}
+          mode="contained"
+          buttonColor="#00BF63"
+          textColor="#fff"
+        >
+          Grant Permission
+        </Button>
       </View>
     );
   }
@@ -495,86 +521,69 @@ export default function CustomersScreen() {
     onUpdateWaybillStatus("Delivered");
   };
 
-  const colors = ALERT_COLORS[alertColor] ?? ALERT_COLORS.green;
-
   return (
     <SafeAreaView style={styles.container}>
       {/* HEADER */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={22} color="#1F2937" />
-        </TouchableOpacity>
-        <View style={styles.headerTextContainer}>
-          <Text style={styles.title}>Customer Delivery</Text>
-          <Text style={styles.subtitle}>Scan orders for delivery</Text>
-        </View>
-        <View style={{ width: 40 }} />
-      </View>
+      <ScreenHeader
+        title="Customer Delivery"
+        subtitle="Scan orders for delivery"
+        icon={<Ionicons name="scan-outline" size={20} color="#00BF63" />}
+        onBack={() => router.back()}
+      />
 
       {/* SCANNER */}
-      <View style={styles.scannerContainer}>
-        {showScanner && (
-          <BarcodeScanner
-            key="background-scanner"
-            onScan={onScan}
-            scanned={scanned}
-          />
-        )}
+      {showScanner && (
+        <BarcodeScanner
+          key="background-scanner"
+          onScan={onScan}
+          scanned={scanned}
+        />
+      )}
 
-        {/* SCANNING STATUS — pinned to bottom of scanner */}
-
-        <View style={styles.statusContainer}>
-          <TouchableOpacity onPress={() => sendUpdatedDeliveredData()}>
-            <Text
-              style={{ textAlign: "center", marginBottom: 8, color: "gray" }}
-            >
-              Socket Test
-            </Text>
-          </TouchableOpacity>
-          <View
-            style={[
-              styles.statusIndicator,
-              {
-                backgroundColor: loadingScan
-                  ? "#f59e0b"
-                  : scanned
-                    ? "#ef4444"
-                    : "#22c55e",
-              },
-            ]}
-          />
-          <Text style={styles.statusText}>
-            {loadingScan
-              ? "Processing..."
-              : scanned
-                ? "Camera Locked"
-                : "Ready to Scan"}
-          </Text>
-        </View>
-      </View>
+      <ScanStatusBar
+        loading={loadingScan}
+        readyText={scanned ? "Camera Locked" : "Ready to Scan"}
+        processingText="Processing…"
+      />
 
       {/* SCAN RESULT ALERT */}
-      {data ? (
-        <View
-          style={[
-            styles.resultAlert,
-            { borderColor: colors.border, backgroundColor: colors.bg },
-          ]}
-        >
-          {loadingScan ? (
-            <Text style={[styles.resultText, { color: colors.text }]}>
-              Scanning...
-            </Text>
-          ) : (
-            <Text style={[styles.resultText, { color: colors.text }]}>
-              {scanResultMessage}
-            </Text>
-          )}
-        </View>
+      <ScanResultAlert
+        visible={loadingScan || invalid || !!scanResultMessage}
+        loading={loadingScan}
+        color={alertColor}
+        message={scanResultMessage}
+        code={data?.data}
+        onRetry={
+          alertColor === "red"
+            ? () => {
+                setData("");
+                setScanResultMessage("");
+                setInvalid(false);
+                setScanned(false);
+                setScannedOrderDetails(null);
+              }
+            : undefined
+        }
+      />
+
+      {scannedOrderDetails ? (
+        <ScanDetailCard visible {...scannedOrderDetails} />
       ) : null}
+
+      <ScanStatsCard
+        icon={<Ionicons name="checkmark-done-circle" size={22} color="#00BF63" />}
+        label={scanCount === 1 ? "Item Scanned" : "Items Scanned"}
+        value={scanCount}
+      />
+
+      {/* SOCKET TEST BUTTON */}
+      <View style={{ alignItems: "center", marginVertical: 8 }}>
+        <TouchableOpacity onPress={() => sendUpdatedDeliveredData()}>
+          <Text style={{ textAlign: "center", color: "#64748B" }}>
+            Socket Test
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       {/* BOTTOM DRAWER - Order Details */}
       <BottomDrawer
@@ -585,67 +594,55 @@ export default function CustomersScreen() {
         closeOnPressBack={false}
         gestureMode="none"
       >
-        <View style={{ padding: 20 }}>
+        <DrawerHeader
+          title={waybillDetails?.itemName || "Order Details"}
+          subtitle={waybillDetails?.orderNumber}
+          icon={<Ionicons name="cube" size={22} color="#00BF63" />}
+          onClose={() => onCloseBottomDrawer()}
+          showHandle={false}
+        />
+        <View style={{ paddingHorizontal: 20 }}>
           <ScrollView style={styles.containerTwo}>
-            {scanResultMessage && (
-              <View style={{ alignItems: "center" }}>
-                <View
-                  style={{
-                    padding: 20,
-                    borderRadius: 20,
-                    alignItems: "center",
-                    backgroundColor: "#22c55e",
-                    width: 300,
-                    marginBottom: 10,
-                  }}
-                >
-                  <Text
-                    style={{
-                      textAlign: "center",
-                      width: "90%",
-                      color: "white",
-                      fontWeight: "600",
-                      fontSize: 15,
-                    }}
-                  >
-                    {scanResultMessage}
-                  </Text>
-                </View>
-              </View>
-            )}
-
             {/* Order Card */}
             <View style={styles.card}>
-              <View>
-                <Text>
-                  <Text style={{ fontWeight: "bold" }}>Delivery Attempts</Text>{" "}
-                  : {attempts.toUpperCase()}
+              <View style={styles.attemptsBadge}>
+                <Ionicons name="repeat" size={13} color="#F59E0B" />
+                <Text style={styles.attemptsBadgeText}>
+                  Delivery Attempts: {attempts.toUpperCase()}
                 </Text>
               </View>
-              <Text style={styles.boldText}>{waybillDetails?.itemName}</Text>
-              <Text>{waybillDetails?.orderNumber}</Text>
+
               <View style={styles.divider} />
-              <Text>
-                <Text style={{ fontWeight: "bold" }}>COD Value:</Text>{" "}
-                {waybillDetails?.codValue}
-              </Text>
-              <Text>
-                <Text style={{ fontWeight: "bold" }}>Item Weight:</Text>{" "}
-                {waybillDetails?.itemWeight}{" "}
-              </Text>
-              <Text>
-                <Text style={{ fontWeight: "bold" }}> Number of Item: </Text>{" "}
-                {waybillDetails?.numberOfItem}
-              </Text>
-              <Text>
-                <Text style={{ fontWeight: "bold" }}> Recipient: </Text>
-                {`${waybillDetails?.receiverFirstName} ${waybillDetails?.receiverMiddleName} ${waybillDetails?.receiverLastName}`}
-              </Text>
-              <Text>
-                {" "}
-                <Text style={{ fontWeight: "bold" }}>Phone:</Text>{" "}
-                {waybillDetails?.receiverPhone}
-              </Text>
+
+              <View style={styles.infoRow}>
+                <Ionicons name="cash-outline" size={16} color="#94A3B8" />
+                <Text style={styles.infoLabel}>COD Value</Text>
+                <Text style={styles.infoValue}>{waybillDetails?.codValue}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Ionicons name="scale-outline" size={16} color="#94A3B8" />
+                <Text style={styles.infoLabel}>Item Weight</Text>
+                <Text style={styles.infoValue}>{waybillDetails?.itemWeight}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Ionicons name="layers-outline" size={16} color="#94A3B8" />
+                <Text style={styles.infoLabel}>Number of Items</Text>
+                <Text style={styles.infoValue}>{waybillDetails?.numberOfItem}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Ionicons name="person-outline" size={16} color="#94A3B8" />
+                <Text style={styles.infoLabel}>Recipient</Text>
+                <Text style={styles.infoValue} numberOfLines={1}>
+                  {`${waybillDetails?.receiverFirstName ?? ""} ${waybillDetails?.receiverMiddleName ?? ""} ${waybillDetails?.receiverLastName ?? ""}`}
+                </Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Ionicons name="call-outline" size={16} color="#94A3B8" />
+                <Text style={styles.infoLabel}>Phone</Text>
+                <Text style={styles.infoValue}>
+                  {waybillDetails?.receiverPhone}
+                </Text>
+              </View>
             </View>
 
             {/* Status Area */}
@@ -684,7 +681,7 @@ export default function CustomersScreen() {
                     style={{
                       textAlign: "center",
                       fontSize: 15,
-                      color: "tomato",
+                      color: "#EF4444",
                       padding: 10,
                     }}
                   >
@@ -715,6 +712,13 @@ export default function CustomersScreen() {
         closeOnPressBack={false}
         gestureMode="none"
       >
+        <DrawerHeader
+          title="Proof of Delivery"
+          subtitle={waybillDetails?.waybillNumber}
+          icon={<Ionicons name="camera" size={22} color="#00BF63" />}
+          onClose={() => closeCameraDrawer()}
+          showHandle={false}
+        />
         <View style={{ padding: 20 }}>
           {isPODActive && !photoUri ? (
             <CameraView
@@ -816,7 +820,7 @@ export default function CustomersScreen() {
             ) : (
               <>
                 <Button
-                  buttonColor="#22c55e"
+                  buttonColor="#00BF63"
                   textColor="white"
                   onPress={submitPhoto}
                   mode="contained"
@@ -826,7 +830,7 @@ export default function CustomersScreen() {
                   Submit
                 </Button>
                 <Button
-                  buttonColor="#dc2626"
+                  buttonColor="#DC2626"
                   textColor="white"
                   onPress={cancelPhoto}
                   mode="contained"
@@ -837,7 +841,7 @@ export default function CustomersScreen() {
               </>
             )}
             <Button
-              buttonColor="#9E9E9E"
+              buttonColor="#64748B"
               textColor="white"
               onPress={() => closeCameraDrawer()}
               mode="contained"
@@ -866,12 +870,12 @@ export default function CustomersScreen() {
           />
           {attemptsMessage !== "" && (
             <View style={{ padding: 10, marginTop: -10 }}>
-              <Text style={{ color: "tomato" }}>{attemptsMessage.message}</Text>
+              <Text style={{ color: "#EF4444" }}>{attemptsMessage.message}</Text>
             </View>
           )}
           <View style={{ gap: 10 }}>
             <Button
-              buttonColor="#22c55e"
+              buttonColor="#00BF63"
               textColor="white"
               onPress={onSave}
               mode="contained"
@@ -882,7 +886,7 @@ export default function CustomersScreen() {
             </Button>
             <Button
               disabled={loading}
-              textColor="black"
+              textColor="#64748B"
               onPress={() => onCloseBottomDrawer()}
               mode="outlined"
             >
@@ -897,62 +901,11 @@ export default function CustomersScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8FAFC" },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
-  },
-  headerTextContainer: { flex: 1 },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: "#F1F5F9",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 10,
-  },
-  title: { fontSize: 22, fontWeight: "700", color: "#2c3e50" },
-  subtitle: { fontSize: 13, color: "#7f8c8d", marginTop: 2 },
-  scannerContainer: {
-    flex: 1,
-    margin: 20,
-    borderRadius: 16,
-    overflow: "hidden",
-  },
-  statusContainer: {
-    position: "absolute",
-    bottom: 16,
-    left: 16,
-    right: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    backgroundColor: "rgba(240, 253, 244, 0.92)",
-  },
-  statusIndicator: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
-  statusText: { fontSize: 14, fontWeight: "600", color: "#15803D" },
-  resultAlert: {
-    marginHorizontal: 20,
-    marginBottom: 12,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: "center",
-  },
-  resultText: { fontSize: 15, fontWeight: "600", textAlign: "center" },
   buttonText: { color: "#fff", fontWeight: "bold" },
-  successButton: { backgroundColor: "#22c55e" },
-  cancelButton: { backgroundColor: "#dc2626" },
-  submitButton: { backgroundColor: "#22c55e" },
-  closeButton: { backgroundColor: "#9E9E9E" },
+  successButton: { backgroundColor: "#00BF63" },
+  cancelButton: { backgroundColor: "#DC2626" },
+  submitButton: { backgroundColor: "#00BF63" },
+  closeButton: { backgroundColor: "#64748B" },
   camera: {
     width: "100%",
     height: 400,
@@ -1005,17 +958,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 64,
   },
   text: { fontSize: 24, fontWeight: "bold", color: "white" },
-  content: { marginTop: 40, justifyContent: "center", alignItems: "center" },
-  description: {
-    fontSize: 16,
-    textAlign: "center",
-    marginTop: 20,
-    opacity: 0.8,
-  },
-  errorBg: { backgroundColor: "#fee", borderColor: "#fcc" },
-  successBg: { backgroundColor: "#d4edda", borderColor: "#c3e6cb" },
-  errorColor: { color: "#e74c3c" },
-  successColor: { color: "#27ae60" },
   containerTwo: {
     backgroundColor: "#fff",
     height: 500,
@@ -1024,17 +966,48 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: "#F1F5F9",
     marginBottom: 16,
     flexDirection: "column",
     gap: 10,
   },
-  boldText: { fontWeight: "bold", fontSize: 16, marginBottom: 4 },
-  divider: { height: 1, backgroundColor: "#e5e7eb", marginVertical: 10 },
+  divider: { height: 1, backgroundColor: "#F1F5F9", marginVertical: 10 },
+  attemptsBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    backgroundColor: "#F59E0B15",
+  },
+  attemptsBadgeText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#B45309",
+  },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  infoLabel: {
+    fontSize: 14,
+    color: "#64748B",
+    flex: 1,
+  },
+  infoValue: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#0F172A",
+    flexShrink: 1,
+    textAlign: "right",
+  },
   verticalDivider: {
     width: 1,
     height: 14,
-    backgroundColor: "#e5e7eb",
+    backgroundColor: "#F1F5F9",
     marginHorizontal: 8,
   },
   row: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
@@ -1045,32 +1018,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginVertical: 6,
   },
-  warningButton: { backgroundColor: "#f59e0b" },
+  warningButton: { backgroundColor: "#F59E0B" },
   successText: { fontSize: 32, marginBottom: 8 },
   label: { fontSize: 16, fontWeight: "600", marginBottom: 8 },
   textArea: {
     height: 120,
     borderWidth: 1,
-    borderColor: "#ccc",
+    borderColor: "#F1F5F9",
     borderRadius: 8,
     padding: 12,
     fontSize: 14,
     marginBottom: 16,
-  },
-  scanCountCard: {
-    backgroundColor: "#fff",
-    paddingVertical: 10,
-    paddingHorizontal: 32,
-    borderRadius: 14,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#D1FAE5",
-  },
-  scanCountNumber: { fontSize: 28, fontWeight: "800", color: "#22c55e" },
-  scanCountLabel: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#64748B",
-    marginTop: 2,
   },
 });

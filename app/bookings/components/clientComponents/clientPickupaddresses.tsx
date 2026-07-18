@@ -1,6 +1,6 @@
 import { useAppSelector } from "@/store/hooks";
 import axiosInstance from "@/utils/axiosInstance";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useIsFocused } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -119,7 +119,7 @@ export default function ClientScreen() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <FontAwesome name="chevron-left" size={24} color="#22c55e" />
+          <Ionicons name="chevron-back" size={24} color="#00BF63" />
         </TouchableOpacity>
 
         <Text style={styles.title}>Client Pick Up Addresses</Text>
@@ -131,7 +131,7 @@ export default function ClientScreen() {
             padding: 20,
             marginTop: 20,
             borderRadius: 12,
-            backgroundColor: "#22c55e",
+            backgroundColor: "#00BF63",
             elevation: 2,
             flexDirection: "row",
             justifyContent: "space-between",
@@ -160,11 +160,11 @@ export default function ClientScreen() {
 
       {loadingClientData ? (
         <View style={{ padding: 20 }}>
-          <ActivityIndicator size="large" color="#22c55e" />
+          <ActivityIndicator size="large" color="#00BF63" />
         </View>
       ) : error ? (
         <View>
-          <Text style={{ color: "red" }}>
+          <Text style={{ color: "#EF4444" }}>
             Something went wrong while trying to display data
           </Text>
         </View>
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "bold",
 
-    color: "#22c55e",
+    color: "#00BF63",
   },
   subtitle: {
     fontSize: 16,

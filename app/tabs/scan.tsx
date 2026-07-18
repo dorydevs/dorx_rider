@@ -1,5 +1,10 @@
 import { BarcodeScanner } from "@/components/BarcodeScanner";
+import { DrawerHeader } from "@/components/DrawerHeader";
+import { ScanResultAlert } from "@/components/ScanResultAlert";
+import { ScanStatusBar } from "@/components/ScanStatusBar";
 import { useScannerSounds } from "@/components/ScannerSounds";
+import { ScreenHeader } from "@/components/ScreenHeader";
+import { SectionHeader } from "@/components/SectionHeader";
 import { useAppSelector } from "@/store/hooks";
 import axiosInstance from "@/utils/axiosInstance";
 import { Ionicons } from "@expo/vector-icons";
@@ -10,10 +15,10 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 import BottomDrawer from "react-native-animated-bottom-drawer";
+import { SafeAreaView } from "react-native-safe-area-context";
 export default function RTSIncomingScreen() {
   const router = useRouter();
 
@@ -24,6 +29,7 @@ export default function RTSIncomingScreen() {
   const [userData, setUserData] = useState<any>(null);
   const [loadingScan, setLoadingScan] = useState(false);
   const [scanResultMessage, setScanResultMessage] = useState("");
+  const [alertColor, setAlertColor] = useState<"green" | "red">("green");
   // const [waybillDetails, setWaybillDetails] = useState<any>([]);
   const [waybillDetails, setWaybillDetails] = useState<any>({});
 
@@ -39,13 +45,6 @@ export default function RTSIncomingScreen() {
     <View style={styles.row}>
       <Text style={styles.label}>{label}</Text>
       <Text style={styles.value}>{value ?? "-"}</Text>
-    </View>
-  );
-
-  const SectionHeader = ({ icon, title }: { icon: string; title: string }) => (
-    <View style={styles.sectionHeader}>
-      <Ionicons name={icon as any} size={18} color="#22c55e" />
-      <Text style={styles.sectionTitle}>{title}</Text>
     </View>
   );
 
@@ -95,13 +94,42 @@ export default function RTSIncomingScreen() {
           playSuccess();
 
           setWaybillDetails(waybillData);
+          setAlertColor("green");
+          setScanResultMessage("✓ Scan successful! Item details loaded.");
           setLoadingScan(false);
           setScanned(false);
           bottomDrawerRef.current?.open();
-        } catch (error) {
+        } catch (error: any) {
           playError();
           setLoadingScan(false);
           setScanned(false);
+
+          let errorMessage = "Scanning failed. ";
+
+          if (error.message === "Network Error" || !error.response) {
+            errorMessage +=
+              "Network connection error. Please check your internet and try again.";
+          } else if (error.response?.status === 404) {
+            errorMessage +=
+              "Order not found. Please verify the waybill number.";
+          } else if (error.response?.status === 400) {
+            errorMessage +=
+              error.response?.data?.message ||
+              "Invalid request. Please try again.";
+          } else if (error.response?.status === 401) {
+            errorMessage += "Session expired. Please log in again.";
+          } else if (error.response?.status === 500) {
+            errorMessage += "Server error. Please contact support.";
+          } else if (error.response?.data?.message) {
+            errorMessage += error.response.data.message;
+          } else if (error.message) {
+            errorMessage += error.message;
+          } else {
+            errorMessage += "Unknown error occurred.";
+          }
+
+          setAlertColor("red");
+          setScanResultMessage(errorMessage);
         }
       }
     };
@@ -111,55 +139,54 @@ export default function RTSIncomingScreen() {
   }, [data, userData]);
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="chevron-back" size={24} color="#22c55e" />
-        </TouchableOpacity>
-        <View style={styles.headerTextContainer}>
-          <Text style={styles.title}>Scan Items</Text>
-          <Text style={styles.subtitle}>Scan waybill or order number</Text>
-        </View>
-      </View>
+    <SafeAreaView style={styles.container}>
+      <ScreenHeader
+        title="Scan Items"
+        subtitle="Scan waybill or order number"
+        icon={<Ionicons name="scan-outline" size={20} color="#00BF63" />}
+        onBack={() => router.back()}
+      />
 
-      <View style={styles.scannerContainer}>
-        <BarcodeScanner onScan={onScan} scanned={scanned} />
-      </View>
-      
-      <View style={styles.statusContainer}>
-        <View
-          style={[
-            styles.statusIndicator,
-            { backgroundColor: scanned ? "#ef4444" : "#22c55e" },
-          ]}
-        />
-        <Text style={styles.statusText}>
-          {loadingScan
-            ? "Processing..."
-            : scanned
-              ? "Camera Locked"
-              : "Ready to Scan"}
-        </Text>
-      </View>
-      
-      {scanResultMessage && (
-        <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle" size={20} color="#e74c3c" />
-          <Text style={styles.errorText}>{scanResultMessage}</Text>
-        </View>
-      )}
+      <BarcodeScanner onScan={onScan} scanned={scanned} />
+
+      <ScanStatusBar
+        loading={loadingScan}
+        readyText={scanned ? "Camera Locked" : "Ready to Scan"}
+        processingText="Processing…"
+      />
+
+      <ScanResultAlert
+        visible={loadingScan || !!scanResultMessage}
+        loading={loadingScan}
+        color={alertColor}
+        message={scanResultMessage}
+        onRetry={
+          alertColor === "red"
+            ? () => {
+                setScanResultMessage("");
+                setData("");
+              }
+            : undefined
+        }
+      />
 
       <BottomDrawer
         ref={bottomDrawerRef}
         initialHeight={560}
         enableSnapping={false}
       >
-        <View style={styles.drawerHandle} />
+        <DrawerHeader
+          title="Parcel Details"
+          subtitle={waybillDetails.waybillNumber}
+          icon={<Ionicons name="cube" size={22} color="#00BF63" />}
+          onClose={() => bottomDrawerRef.current?.close()}
+        />
         <ScrollView contentContainerStyle={styles.drawerContent}>
-          <SectionHeader icon="cube" title="Item Details" />
+          <SectionHeader
+            title="Item Details"
+            accentColor="#00BF63"
+            icon={<Ionicons name="cube" size={18} color="#00BF63" />}
+          />
 
           <InfoRow label="Item Name" value={waybillDetails.itemName} />
           <InfoRow label="Item Weight" value={waybillDetails.itemWeight} />
@@ -185,7 +212,13 @@ export default function RTSIncomingScreen() {
           <InfoRow label="Pouches Size" value={waybillDetails.pouchesSize} />
           <InfoRow label="Remarks" value={waybillDetails.remarks} />
 
-          <SectionHeader icon="document-text" title="Waybill Details" />
+          <SectionHeader
+            title="Waybill Details"
+            accentColor="#00BF63"
+            icon={
+              <Ionicons name="document-text" size={18} color="#00BF63" />
+            }
+          />
 
           <InfoRow
             label="Waybill Number"
@@ -194,7 +227,11 @@ export default function RTSIncomingScreen() {
           <InfoRow label="Order Number" value={waybillDetails.orderNumber} />
           <InfoRow label="Status" value={waybillDetails.orderStatus} />
 
-          <SectionHeader icon="person" title="Sender" />
+          <SectionHeader
+            title="Sender"
+            accentColor="#00BF63"
+            icon={<Ionicons name="person" size={18} color="#00BF63" />}
+          />
 
           <InfoRow label="Name" value={waybillDetails.senderName} />
           <InfoRow label="Phone" value={waybillDetails.senderPhone} />
@@ -204,7 +241,11 @@ export default function RTSIncomingScreen() {
           />
           <InfoRow label="Address" value={waybillDetails.senderAddress} />
 
-          <SectionHeader icon="location" title="Recipient" />
+          <SectionHeader
+            title="Recipient"
+            accentColor="#00BF63"
+            icon={<Ionicons name="location" size={18} color="#00BF63" />}
+          />
 
           <InfoRow label="Name" value={waybillDetails.receiverName} />
           <InfoRow label="Phone" value={waybillDetails.receiverPhone} />
@@ -215,125 +256,30 @@ export default function RTSIncomingScreen() {
           <InfoRow label="Address" value={waybillDetails.receiverAddress} />
         </ScrollView>
       </BottomDrawer>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f7fa",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingTop: 50,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
-    backgroundColor: "#fff",
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 8,
-  },
-  headerTextContainer: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#2c3e50",
-  },
-  subtitle: {
-    fontSize: 13,
-    color: "#7f8c8d",
-    marginTop: 2,
-  },
-  scannerContainer: {
-    flex: 1,
-    margin: 20,
-    borderRadius: 16,
-    overflow: "hidden",
-  },
-  statusContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 12,
-    marginHorizontal: 20,
-    marginBottom: 12,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-  },
-  statusIndicator: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 8,
-  },
-  statusText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#2c3e50",
-  },
-  errorContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    marginHorizontal: 20,
-    marginBottom: 12,
-    padding: 12,
-    backgroundColor: "#fee",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#fcc",
-  },
-  errorText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#e74c3c",
-    flex: 1,
-  },
-  drawerHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: "#e8ecf1",
-    borderRadius: 2,
-    alignSelf: "center",
-    marginTop: 8,
-    marginBottom: 16,
+    backgroundColor: "#F8FAFC",
   },
   drawerContent: {
     padding: 20,
     paddingBottom: 40,
   },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 20,
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#2c3e50",
-  },
   row: {
     borderWidth: 1,
-    borderColor: "#e8ecf1",
-    borderRadius: 8,
+    borderColor: "#F1F5F9",
+    borderRadius: 12,
     padding: 12,
     marginBottom: 8,
     backgroundColor: "#fff",
   },
   label: {
     fontSize: 11,
-    color: "#7f8c8d",
+    color: "#94A3B8",
     fontWeight: "600",
     textTransform: "uppercase",
     letterSpacing: 0.5,
@@ -342,26 +288,6 @@ const styles = StyleSheet.create({
   value: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#2c3e50",
+    color: "#1E293B",
   },
-  content: {
-    marginTop: 40,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  description: {
-    fontSize: 16,
-    textAlign: "center",
-    marginTop: 20,
-    opacity: 0.8,
-  },
-  resultAlert: {
-    marginTop: 10,
-    marginHorizontal: 12,
-    padding: 10,
-    borderRadius: 8,
-    borderWidth: 2,
-    alignItems: "center",
-  },
-  resultText: { fontSize: 14, fontWeight: "600", marginTop: 4 },
 });

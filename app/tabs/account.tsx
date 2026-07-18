@@ -1,13 +1,22 @@
+import { ConfirmModal } from "@/components/ConfirmModal";
+import { DashboardHeader } from "@/components/DashboardHeader";
+import { SectionHeader } from "@/components/SectionHeader";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { clearUser } from "@/store/slices/userSlice";
 import { clearSession } from "@/utils/auth";
 import { Ionicons } from "@expo/vector-icons";
-import AntDesign from "@expo/vector-icons/AntDesign";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function AccountScreen() {
   const router = useRouter();
@@ -15,6 +24,7 @@ export default function AccountScreen() {
   const user = useAppSelector((state: any) => state.user.user);
   const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isLogoutModalVisible, setIsLogoutModalVisible] = useState(false);
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -35,256 +45,334 @@ export default function AccountScreen() {
     loadUserData();
   }, [user]);
 
-  const handleLogout = useCallback(() => {
-    Alert.alert("Logout", "Are you sure you want to logout?", [
-      {
-        text: "Cancel",
-        style: "cancel",
-      },
-      {
-        text: "Logout",
-        style: "destructive",
-        onPress: async () => {
-          dispatch(clearUser());
-          await clearSession();
-          router.replace("/login");
-        },
-      },
-    ]);
+  const handleConfirmLogout = useCallback(async () => {
+    setIsLogoutModalVisible(false);
+    dispatch(clearUser());
+    await clearSession();
+    router.replace("/login");
   }, [dispatch, router]);
 
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#00BF63" />
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const roleLabel =
+    userData?.accountType === 1 ? "Hub Rider" : "Store Rider";
+  const locationLabel =
+    [userData?.storeCity, userData?.storeProvince].filter(Boolean).join(", ") ||
+    "Location not set";
+  const pickupAreas: string[] = userData?.assignedBarangays || [];
+
   return (
-    <View style={styles.container}>
-      <View style={styles.card}>
-        <View style={styles.header}>
-          <View style={styles.avatarContainer}>
-            <FontAwesome name="user-o" size={40} color="#fff" />
-          </View>
-          <View style={styles.headerInfo}>
-            <Text style={styles.name}>{userData?.name || "User"}</Text>
-            <Text style={styles.role}>
-              {userData?.accountType === 1 ? "Hub Rider" : "Store Rider"}
-            </Text>
-          </View>
-        </View>
+    <SafeAreaView style={styles.safeArea} edges={["left", "right"]}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <DashboardHeader
+          eyebrow="MY ACCOUNT"
+          username={userData?.name || "User"}
+          role={roleLabel}
+          location={locationLabel}
+        />
 
-        <View style={styles.infoSection}>
-          <View style={styles.row}>
-            <View style={styles.iconContainer}>
-              <Ionicons name="call-outline" size={18} color="#22c55e" />
-            </View>
-            <View style={styles.rowContent}>
-              <Text style={styles.rowLabel}>Phone Number</Text>
-              <Text style={styles.rowValue}>
-                {userData?.phoneNumber || "N/A"}
-              </Text>
-            </View>
-          </View>
+        <View style={styles.container}>
+          {/* Contact Information */}
+          <View style={styles.sectionBlock}>
+            <SectionHeader
+              title="Contact Information"
+              accentColor="#00BF63"
+              icon={<Ionicons name="call" size={18} color="#00BF63" />}
+            />
 
-          <View style={styles.row}>
-            <View style={styles.iconContainer}>
-              <Ionicons name="mail-outline" size={18} color="#22c55e" />
-            </View>
-            <View style={styles.rowContent}>
-              <Text style={styles.rowLabel}>Email Address</Text>
-              <Text style={styles.rowValue}>{userData?.email || "N/A"}</Text>
-            </View>
-          </View>
-
-          {userData?.storeName && (
-            <View style={styles.row}>
-              <View style={styles.iconContainer}>
-                <Ionicons name="storefront-outline" size={18} color="#22c55e" />
-              </View>
-              <View style={styles.rowContent}>
-                <Text style={styles.rowLabel}>Store Name</Text>
-                <Text style={styles.rowValue}>
-                  {userData?.storeName || "N/A"}
-                </Text>
-              </View>
-            </View>
-          )}
-
-          {(userData?.storeCity || userData?.storeProvince) && (
-            <View style={styles.row}>
-              <View style={styles.iconContainer}>
-                <Ionicons name="location-outline" size={18} color="#22c55e" />
-              </View>
-              <View style={styles.rowContent}>
-                <Text style={styles.rowLabel}>Location</Text>
-                <Text style={styles.rowValue}>
-                  {[userData?.storeCity, userData?.storeProvince]
-                    .filter(Boolean)
-                    .join(", ") || "N/A"}
-                </Text>
-              </View>
-            </View>
-          )}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Pickup Areas</Text>
-          {userData !== null && (
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-              {(userData?.assignedBarangays).map(
-                (area: string, index: number) => (
-                  <Text key={index} style={styles.pills}>
-                    {area}
+            <View style={styles.infoCard}>
+              <View style={styles.infoItem}>
+                <View
+                  style={[styles.iconContainer, { backgroundColor: "#00BF6315" }]}
+                >
+                  <Ionicons name="call" size={18} color="#00BF63" />
+                </View>
+                <View style={styles.infoContent}>
+                  <Text style={styles.infoLabel}>Phone Number</Text>
+                  <Text style={styles.infoValue}>
+                    {userData?.phoneNumber || "Not set"}
                   </Text>
-                ),
+                </View>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.infoItem}>
+                <View
+                  style={[styles.iconContainer, { backgroundColor: "#00BF6315" }]}
+                >
+                  <Ionicons name="mail" size={18} color="#00BF63" />
+                </View>
+                <View style={styles.infoContent}>
+                  <Text style={styles.infoLabel}>Email Address</Text>
+                  <Text style={styles.infoValue}>
+                    {userData?.email || "Not set"}
+                  </Text>
+                </View>
+              </View>
+
+              {userData?.storeName ? (
+                <>
+                  <View style={styles.divider} />
+                  <View style={styles.infoItem}>
+                    <View
+                      style={[
+                        styles.iconContainer,
+                        { backgroundColor: "#00BF6315" },
+                      ]}
+                    >
+                      <Ionicons name="storefront" size={18} color="#00BF63" />
+                    </View>
+                    <View style={styles.infoContent}>
+                      <Text style={styles.infoLabel}>Store Name</Text>
+                      <Text style={styles.infoValue}>{userData.storeName}</Text>
+                    </View>
+                  </View>
+                </>
+              ) : null}
+
+              {userData?.storeCity || userData?.storeProvince ? (
+                <>
+                  <View style={styles.divider} />
+                  <View style={styles.infoItem}>
+                    <View
+                      style={[
+                        styles.iconContainer,
+                        { backgroundColor: "#00BF6315" },
+                      ]}
+                    >
+                      <Ionicons name="location" size={18} color="#00BF63" />
+                    </View>
+                    <View style={styles.infoContent}>
+                      <Text style={styles.infoLabel}>Location</Text>
+                      <Text style={styles.infoValue}>{locationLabel}</Text>
+                    </View>
+                  </View>
+                </>
+              ) : null}
+            </View>
+          </View>
+
+          {/* Pickup Areas */}
+          <View style={styles.sectionBlock}>
+            <SectionHeader
+              title="Pickup Areas"
+              accentColor="#00BF63"
+              icon={<Ionicons name="map" size={18} color="#00BF63" />}
+            />
+
+            <View style={styles.pillsCard}>
+              {pickupAreas.length > 0 ? (
+                <View style={styles.pillsWrap}>
+                  {pickupAreas.map((area: string, index: number) => (
+                    <View key={index} style={styles.pill}>
+                      <Text style={styles.pillText}>{area}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <Text style={styles.emptyText}>No pickup areas assigned</Text>
               )}
             </View>
-          )}
-        </View>
+          </View>
 
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <AntDesign name="logout" size={20} color="#fff" />
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+          {/* Session */}
+          <View style={styles.sectionBlock}>
+            <SectionHeader
+              title="Session"
+              accentColor="#EF4444"
+              icon={
+                <Ionicons name="log-out-outline" size={18} color="#EF4444" />
+              }
+            />
+
+            <TouchableOpacity
+              style={styles.logoutButton}
+              onPress={() => setIsLogoutModalVisible(true)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.logoutIconContainer}>
+                <Ionicons name="log-out-outline" size={18} color="#EF4444" />
+              </View>
+              <Text style={styles.logoutText}>Logout</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* App Info */}
+          <View style={styles.footer}>
+            <Text style={styles.footerBrand}>Dory Express Riders</Text>
+            <Text style={styles.versionText}>Version 1.0.0</Text>
+          </View>
+        </View>
+      </ScrollView>
+
+      <ConfirmModal
+        visible={isLogoutModalVisible}
+        icon="log-out-outline"
+        title="Logout"
+        message="Are you sure you want to logout?"
+        confirmText="Logout"
+        cancelText="Cancel"
+        destructive
+        onConfirm={handleConfirmLogout}
+        onCancel={() => setIsLogoutModalVisible(false)}
+      />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
+    backgroundColor: "#F8FAFC",
+  },
+  container: {
     padding: 16,
-    backgroundColor: "#f5f7fa",
+    paddingTop: 20,
+    paddingBottom: 32,
   },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 5,
-    marginTop: 40,
-  },
-  header: {
-    marginBottom: 24,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e8ecf1",
-  },
-  avatarContainer: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: "#22c55e",
+  loadingContainer: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#22c55e",
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
-  },
-  headerInfo: {
-    flex: 1,
-    gap: 4,
-  },
-  name: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#2c3e50",
-  },
-  role: {
-    fontSize: 14,
-    color: "#7f8c8d",
-    fontWeight: "500",
-  },
-  infoSection: {
-    gap: 16,
-    marginBottom: 20,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "flex-start",
     gap: 12,
   },
-  iconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#dcfce7",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  rowContent: {
-    flex: 1,
-    gap: 4,
-  },
-  rowLabel: {
-    fontSize: 12,
-    color: "#7f8c8d",
-    fontWeight: "500",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  rowValue: {
-    fontSize: 15,
-    color: "#2c3e50",
+  loadingText: {
+    fontSize: 16,
+    color: "#64748B",
     fontWeight: "500",
   },
-  section: {
-    marginTop: 20,
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: "#e8ecf1",
+  sectionBlock: {
+    marginBottom: 8,
   },
-  sectionHeader: {
+  infoCard: {
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 4,
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
+  },
+  infoItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 12,
+    padding: 14,
   },
-  sectionTitle: {
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 14,
+  },
+  infoContent: {
+    flex: 1,
+  },
+  infoLabel: {
+    fontSize: 12,
+    color: "#94A3B8",
+    marginBottom: 2,
+  },
+  infoValue: {
     fontSize: 15,
-    fontWeight: "700",
-    color: "#2c3e50",
+    fontWeight: "600",
+    color: "#1E293B",
   },
-  pillsContainer: {
+  divider: {
+    height: 1,
+    backgroundColor: "#F1F5F9",
+    marginHorizontal: 14,
+  },
+  pillsCard: {
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 14,
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
+  },
+  pillsWrap: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
   },
   pill: {
-    backgroundColor: "#dcfce7",
+    backgroundColor: "#00BF6315",
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#bbf7d0",
   },
   pillText: {
     fontSize: 13,
-    color: "#16a34a",
+    color: "#00994F",
     fontWeight: "600",
+  },
+  emptyText: {
+    fontSize: 13,
+    color: "#94A3B8",
+    textAlign: "center",
+    paddingVertical: 6,
   },
   logoutButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#e74c3c",
-    marginTop: 24,
-    paddingVertical: 14,
-    borderRadius: 12,
-    gap: 8,
-    shadowColor: "#e74c3c",
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 14,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    shadowColor: "#0F172A",
     shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  logoutIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: "#FEE2E2",
+    justifyContent: "center",
+    alignItems: "center",
   },
   logoutText: {
-    color: "#fff",
     fontSize: 16,
+    fontWeight: "600",
+    color: "#EF4444",
+  },
+  footer: {
+    alignItems: "center",
+    marginTop: 12,
+    gap: 4,
+  },
+  footerBrand: {
+    fontSize: 13,
     fontWeight: "700",
+    color: "#00BF63",
+    letterSpacing: 0.3,
+  },
+  versionText: {
+    fontSize: 12,
+    color: "#94A3B8",
   },
 });

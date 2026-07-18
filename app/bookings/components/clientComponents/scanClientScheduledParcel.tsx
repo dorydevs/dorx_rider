@@ -1,8 +1,7 @@
+import { DrawerHeader } from "@/components/DrawerHeader";
 import { useAppSelector } from "@/store/hooks";
 import axiosInstance from "@/utils/axiosInstance";
-import AntDesign from "@expo/vector-icons/AntDesign";
-import Feather from "@expo/vector-icons/Feather";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import moment from "moment";
@@ -22,13 +21,13 @@ import BottomDrawer from "react-native-animated-bottom-drawer";
 type ClientData = any;
 const SheetItem = ({ label, value }: { label: string; value?: any }) => (
   <View style={{ marginBottom: 10 }}>
-    <Text style={{ fontSize: 12, color: "#6b7280" }}>{label}</Text>
+    <Text style={{ fontSize: 12, color: "#64748B" }}>{label}</Text>
     <Text style={{ fontSize: 14, fontWeight: "600" }}>{value ?? "-"}</Text>
   </View>
 );
 
 const Divider = () => (
-  <View style={{ height: 1, backgroundColor: "#e5e7eb", marginVertical: 12 }} />
+  <View style={{ height: 1, backgroundColor: "#F1F5F9", marginVertical: 12 }} />
 );
 export default function scanClientScheduledParcel() {
   // const bottomSheetRef = useRef<BottomSheet>(null);
@@ -70,7 +69,7 @@ export default function scanClientScheduledParcel() {
         <View>
           <Text>{item.waybillNumber}</Text>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <Feather name="calendar" size={15} />
+            <Ionicons name="calendar-outline" size={15} color="#0F172A" />
             <Text style={{ fontSize: 14, opacity: 0.5 }}>
               {item.scheduleForPickup
                 ? new Date(item.scheduleForPickup).toLocaleDateString("en-US", {
@@ -162,7 +161,7 @@ export default function scanClientScheduledParcel() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <FontAwesome name="chevron-left" size={24} color="#22c55e" />
+          <Ionicons name="chevron-back" size={24} color="#00BF63" />
         </TouchableOpacity>
 
         <Text style={styles.title}>Client Scheduled to Pick up</Text>
@@ -173,7 +172,7 @@ export default function scanClientScheduledParcel() {
             padding: 20,
             marginTop: 20,
             borderRadius: 12,
-            backgroundColor: "#22c55e",
+            backgroundColor: "#00BF63",
             elevation: 2,
             flexDirection: "row",
             justifyContent: "space-between",
@@ -184,7 +183,7 @@ export default function scanClientScheduledParcel() {
             <View
               style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
             >
-              <Feather name="calendar" size={17} style={{ color: "white" }} />
+              <Ionicons name="calendar-outline" size={17} color="#fff" />
               <Text style={{ fontSize: 17, color: "white" }}>
                 {moment(clientScheduledToPickUpData?.date).format("YYYY-MM-DD")}
               </Text>
@@ -238,7 +237,8 @@ export default function scanClientScheduledParcel() {
           justifyContent: "center",
         }}
       >
-        <Text>Scan</Text> <AntDesign name="qrcode" size={24} color="black" />
+        <Text>Scan</Text>{" "}
+        <Ionicons name="qr-code" size={24} color="#0F172A" />
       </TouchableOpacity>
       {loading ? (
         <View style={{ padding: 20 }}>
@@ -261,6 +261,12 @@ export default function scanClientScheduledParcel() {
         initialHeight={560}
         enableSnapping={false}
       >
+        <DrawerHeader
+          title="Scheduled Pickup"
+          subtitle={selectedItem?.waybillNumber}
+          icon={<Ionicons name="document-text" size={22} color="#00BF63" />}
+          onClose={() => bottomDrawerRef.current?.close()}
+        />
         <ScrollView showsVerticalScrollIndicator={false}>
           {selectedItem && (
             <View style={{ padding: 16 }}>
@@ -378,7 +384,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "bold",
 
-    color: "#22c55e",
+    color: "#00BF63",
   },
   subtitle: {
     fontSize: 16,

@@ -1,67 +1,113 @@
+import { DrawerHeader } from "@/components/DrawerHeader";
 import { useAppSelector } from "@/store/hooks";
 import axiosInstance from "@/utils/axiosInstance";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import moment from "moment";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   useWindowDimensions,
   View,
 } from "react-native";
+import BottomDrawer from "react-native-animated-bottom-drawer";
 import { Ionicons } from "@expo/vector-icons";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 type clientHistoryData = any;
+
+const SheetItem = ({ label, value }: { label: string; value?: any }) => (
+  <View style={{ marginBottom: 12 }}>
+    <Text style={{ fontSize: 11, color: "#64748B", fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</Text>
+    <Text style={{ fontSize: 15, fontWeight: "600", color: "#0F172A", marginTop: 4 }}>{value ?? "-"}</Text>
+  </View>
+);
+const Divider = () => (
+  <View style={{ height: 1, backgroundColor: "#F1F5F9", marginVertical: 16 }} />
+);
+
 export default function clientHistoryt() {
-  const router = useRouter();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const user = useAppSelector((state: any) => state.user.user);
   const [userData, setUserData] = useState<any>(null);
   const [clientLoading, setClientLoading] = useState(false);
   const [client, setClient] = useState<any>(null);
   const [data, setData] = useState<clientHistoryData[]>([]);
   const [dataLoading, setDataLoading] = useState(false);
-  const { clientData } = useLocalSearchParams();
+  const { clientData, filter } = useLocalSearchParams();
   const clientInfo: clientHistoryData = clientData
     ? JSON.parse(clientData as string)
     : null;
 
-  const handlePress = (item: clientHistoryData) => {
-    router.push({
-      pathname: "/history/components/ordersPickedupByHub",
-      params: {
-        orderData: JSON.stringify(item),
-      },
-    });
+  const bottomDrawerRef = useRef<any>(null);
+  const [selectedAddress, setSelectedAddress] = useState<clientHistoryData | null>(null);
+  const [addressBookings, setAddressBookings] = useState<any[]>([]);
+  const [addressBookingsLoading, setAddressBookingsLoading] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState<clientHistoryData | null>(null);
+
+  const activeFilter = (filter as string) || "all";
+  const filteredAddressBookings =
+    activeFilter === "picked-up"
+      ? addressBookings.filter((b: any) => b.orderStatus === "Picked up by Rider")
+      : activeFilter === "dropped-off"
+        ? addressBookings.filter(
+            (b: any) => !!b.orderStatus && b.orderStatus !== "Picked up by Rider",
+          )
+        : addressBookings;
+
+  const openAddressDrawer = async (item: clientHistoryData) => {
+    setSelectedAddress(item);
+    setSelectedBooking(null);
+    bottomDrawerRef.current?.open();
+    try {
+      setAddressBookingsLoading(true);
+      const { data } = await axiosInstance(userData.token).get(
+        `/api/riderTransaction/pickedupBookingsPerPickupAddress?riderId=${userData.id}&clientId=${item.clientId}&pickupAddressId=${item.pickupAddressId}`
+      );
+      setAddressBookings(data);
+    } catch (error) {
+      console.error("Fetch pickup address bookings error:", error);
+    } finally {
+      setAddressBookingsLoading(false);
+    }
   };
 
   const renderItem = ({ item }: { item: clientHistoryData }) => {
     return (
       <TouchableOpacity
         style={[styles.card, { width: Math.min(760, width - 40) }]}
-        onPress={() => handlePress(item)}
+        onPress={() => openAddressDrawer(item)}
         activeOpacity={0.7}
       >
         <View style={styles.cardIconContainer}>
-          <Ionicons name="location" size={22} color="#22c55e" />
+          <Ionicons name="location" size={22} color="#00BF63" />
         </View>
         <View style={styles.cardContent}>
-          <Text style={styles.cardTitle}>{item.pickupAddressName}</Text>
+          <Text style={styles.cardTitle} numberOfLines={1}>
+            {item.pickupAddressName}
+          </Text>
           <View style={styles.cardDetailRow}>
-            <Ionicons name="pin-outline" size={14} color="#7f8c8d" />
-            <Text style={styles.cardAddress}>{item.address}</Text>
+            <Ionicons name="pin-outline" size={14} color="#64748B" />
+            <Text style={styles.cardAddress} numberOfLines={1}>
+              {item.address}
+            </Text>
           </View>
-          <View style={styles.cardDetailRow}>
-            <Ionicons name="calendar-outline" size={14} color="#7f8c8d" />
-            <Text style={styles.cardDate}>
-              {moment(item.scannedDate).format("MMM DD, YYYY")}
+          <View style={styles.cardCountBadge}>
+            <Ionicons name="cube" size={12} color="#00BF63" />
+            <Text style={styles.cardCountBadgeText}>
+              {item.totalPickedUp}{" "}
+              {Number(item.totalPickedUp) === 1 ? "parcel" : "parcels"}
             </Text>
           </View>
         </View>
-        <Ionicons name="chevron-forward" size={20} color="#bdc3c7" />
+        <View style={styles.chevronContainer}>
+          <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+        </View>
       </TouchableOpacity>
     );
   };
@@ -97,7 +143,7 @@ export default function clientHistoryt() {
         );
 
 
-        
+
 
         setClient(response.data?.[0] ?? null);
       } catch (error) {
@@ -129,7 +175,7 @@ export default function clientHistoryt() {
   }, [user]);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.headerSection}>
         <View style={styles.clientCard}>
           <View style={styles.clientHeader}>
@@ -140,27 +186,27 @@ export default function clientHistoryt() {
               <Text style={styles.clientLabel}>Client</Text>
               <Text style={styles.clientName}>{client?.clientName || "Loading..."}</Text>
               <View style={styles.addressRow}>
-                <Ionicons name="location-outline" size={14} color="#d1fae5" />
+                <Ionicons name="location-outline" size={14} color="rgba(255, 255, 255, 0.75)" />
                 <Text style={styles.clientAddress}>{client?.address || ""}</Text>
               </View>
             </View>
           </View>
-          {/* <View style={styles.countBadge}>
-            <Text style={styles.countLabel}>Total Picked Up</Text>
-            <Text style={styles.countValue}>{client.totalPickedUp || 0}</Text>
-          </View> */}
+          <View style={styles.countBadge}>
+            <Text style={styles.countLabel}>Total Items</Text>
+            <Text style={styles.countValue}>{client?.totalPickedUp || 0}</Text>
+          </View>
         </View>
       </View>
 
       <View style={styles.listSection}>
         <View style={styles.listHeader}>
-          <Ionicons name="list" size={18} color="#2c3e50" />
+          <Ionicons name="list" size={18} color="#0F172A" />
           <Text style={styles.listTitle}>Pickup Addresses</Text>
         </View>
 
         {dataLoading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#22c55e" />
+            <ActivityIndicator size="large" color="#00BF63" />
             <Text style={styles.loadingText}>Loading...</Text>
           </View>
         ) : (
@@ -174,31 +220,133 @@ export default function clientHistoryt() {
             ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
-                <Ionicons name="folder-open-outline" size={48} color="#bdc3c7" />
+                <Ionicons name="folder-open-outline" size={48} color="#94A3B8" />
                 <Text style={styles.emptyText}>No pickup addresses found</Text>
               </View>
             }
           />
         )}
       </View>
-    </View>
+
+      <BottomDrawer
+        ref={bottomDrawerRef}
+        initialHeight={560 + insets.bottom}
+        enableSnapping={false}
+        onClose={() => setSelectedBooking(null)}
+      >
+        {selectedBooking ? (
+          <DrawerHeader
+            title="Booking Details"
+            subtitle={
+              selectedBooking.waybillNumber
+                ? `Waybill: ${selectedBooking.waybillNumber}`
+                : undefined
+            }
+            icon={<Ionicons name="document-text" size={22} color="#00BF63" />}
+            onBack={() => setSelectedBooking(null)}
+            onClose={() => bottomDrawerRef.current?.close()}
+          />
+        ) : (
+          <DrawerHeader
+            title={selectedAddress?.pickupAddressName || "Items"}
+            subtitle={
+              addressBookingsLoading
+                ? undefined
+                : `${filteredAddressBookings.length} ${filteredAddressBookings.length === 1 ? "item" : "items"}`
+            }
+            icon={<Ionicons name="cube" size={22} color="#00BF63" />}
+            onClose={() => bottomDrawerRef.current?.close()}
+          />
+        )}
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+        >
+          {selectedBooking ? (
+            <View style={styles.drawerContent}>
+              <SheetItem
+                label="Order Number"
+                value={selectedBooking.orderNumber}
+              />
+              <SheetItem
+                label="Date"
+                value={
+                  selectedBooking.scannedDate
+                    ? moment(selectedBooking.scannedDate).format(
+                        "MMM DD, YYYY"
+                      )
+                    : "-"
+                }
+              />
+
+              <Divider />
+
+              <SheetItem label="Client Name" value={selectedBooking.senderName} />
+              <SheetItem
+                label="Client Address"
+                value={`${selectedBooking.senderProvince}, ${selectedBooking.senderCity}, ${selectedBooking.senderBarangay}`}
+              />
+              <SheetItem
+                label="Phone Number"
+                value={selectedBooking.senderPhone}
+              />
+            </View>
+          ) : (
+            <View style={styles.drawerContent}>
+              {addressBookingsLoading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color="#00BF63" />
+                  <Text style={styles.loadingText}>Loading items...</Text>
+                </View>
+              ) : filteredAddressBookings.length === 0 ? (
+                <View style={styles.emptyContainer}>
+                  <Ionicons name="cube-outline" size={40} color="#94A3B8" />
+                  <Text style={styles.emptyText}>No items found</Text>
+                </View>
+              ) : (
+                filteredAddressBookings.map((booking: any, idx: number) => (
+                  <TouchableOpacity
+                    key={String(booking?.id ?? booking?.bookingId ?? idx)}
+                    style={styles.bookingRow}
+                    onPress={() => setSelectedBooking(booking)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.cardIconContainer}>
+                      <Ionicons name="cube" size={20} color="#00BF63" />
+                    </View>
+                    <View style={styles.cardContent}>
+                      <Text style={styles.cardTitle}>{booking.waybillNumber}</Text>
+                      <View style={styles.cardDetailRow}>
+                        <Ionicons name="person-outline" size={13} color="#64748B" />
+                        <Text style={styles.cardAddress}>{booking.receiverName}</Text>
+                      </View>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+                  </TouchableOpacity>
+                ))
+              )}
+            </View>
+          )}
+        </ScrollView>
+      </BottomDrawer>
+    </SafeAreaView>
   );
 }
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f7fa",
+    backgroundColor: "#F8FAFC",
   },
   headerSection: {
     padding: 20,
-    paddingTop: 50,
+    paddingTop: 16,
     paddingBottom: 16,
   },
   clientCard: {
-    backgroundColor: "#22c55e",
+    backgroundColor: "#00BF63",
     borderRadius: 16,
     padding: 20,
-    shadowColor: "#22c55e",
+    shadowColor: "#00BF63",
     shadowOpacity: 0.3,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
@@ -224,7 +372,7 @@ const styles = StyleSheet.create({
   },
   clientLabel: {
     fontSize: 12,
-    color: "#d1fae5",
+    color: "rgba(255, 255, 255, 0.75)",
     fontWeight: "600",
     textTransform: "uppercase",
     letterSpacing: 1,
@@ -242,7 +390,7 @@ const styles = StyleSheet.create({
   },
   clientAddress: {
     fontSize: 13,
-    color: "#d1fae5",
+    color: "rgba(255, 255, 255, 0.75)",
     flex: 1,
   },
   countBadge: {
@@ -255,7 +403,7 @@ const styles = StyleSheet.create({
   },
   countLabel: {
     fontSize: 12,
-    color: "#d1fae5",
+    color: "rgba(255, 255, 255, 0.75)",
     fontWeight: "600",
     marginBottom: 4,
   },
@@ -277,40 +425,42 @@ const styles = StyleSheet.create({
   listTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#2c3e50",
+    color: "#0F172A",
   },
   listContent: {
     paddingBottom: 20,
   },
   card: {
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
+    shadowColor: "#0F172A",
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
     elevation: 2,
   },
   cardIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#dcfce7",
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: "#00BF6315",
     justifyContent: "center",
     alignItems: "center",
   },
   cardContent: {
     flex: 1,
-    gap: 4,
+    gap: 6,
   },
   cardTitle: {
     fontSize: 15,
-    fontWeight: "600",
-    color: "#2c3e50",
+    fontWeight: "700",
+    color: "#0F172A",
   },
   cardDetailRow: {
     flexDirection: "row",
@@ -319,12 +469,32 @@ const styles = StyleSheet.create({
   },
   cardAddress: {
     fontSize: 13,
-    color: "#7f8c8d",
+    color: "#64748B",
     flex: 1,
   },
-  cardDate: {
-    fontSize: 12,
-    color: "#7f8c8d",
+  cardCountBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 5,
+    marginTop: 2,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 20,
+    backgroundColor: "#00BF6315",
+  },
+  cardCountBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#00BF63",
+  },
+  chevronContainer: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    backgroundColor: "#F8FAFC",
+    justifyContent: "center",
+    alignItems: "center",
   },
   loadingContainer: {
     padding: 40,
@@ -334,7 +504,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: "#7f8c8d",
+    color: "#64748B",
   },
   emptyContainer: {
     padding: 40,
@@ -344,7 +514,21 @@ const styles = StyleSheet.create({
   emptyText: {
     marginTop: 12,
     fontSize: 14,
-    color: "#7f8c8d",
+    color: "#64748B",
+  },
+  drawerContent: {
+    padding: 20,
+  },
+  bookingRow: {
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: "#F8FAFC",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
   },
   backButton: {
     width: 40,
@@ -355,7 +539,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: "bold",
-    color: "#4ade80",
+    color: "#00BF63",
   },
   subtitle: {
     fontSize: 16,

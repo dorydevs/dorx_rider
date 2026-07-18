@@ -1,7 +1,13 @@
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { useScannerSounds } from "@/components/ScannerSounds";
+import { ScanDetailCard, ScanDetailCardProps } from "@/components/ScanDetailCard";
+import { ScanResultAlert } from "@/components/ScanResultAlert";
+import { ScanStatsCard } from "@/components/ScanStatsCard";
+import { ScanStatusBar } from "@/components/ScanStatusBar";
+import { ScreenHeader } from "@/components/ScreenHeader";
 import { useAppSelector } from "@/store/hooks";
 import axiosInstance from "@/utils/axiosInstance";
+import { formatDestination, formatScanTime } from "@/utils/scanFormatting";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
@@ -10,16 +16,6 @@ import { useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import deliveredSocket from "../../helpers/socketConnection";
-
-const ALERT_COLORS: Record<
-  string,
-  { border: string; bg: string; text: string }
-> = {
-  green: { border: "#16a34a", bg: "#22c55e", text: "#ffffff" },
-  red: { border: "#dc2626", bg: "#dc2626", text: "#ffffff" },
-  yellow: { border: "#d97706", bg: "#f59e0b", text: "#ffffff" },
-  orange: { border: "#ea580c", bg: "#f97316", text: "#ffffff" },
-};
 
 export default function RTSIncomingScreen() {
   // Auto-connect deliveredSocket when screen is mounted or revisited
@@ -63,6 +59,10 @@ export default function RTSIncomingScreen() {
     "green",
   );
   const [totalScannedCount, setTotalScannedCount] = useState(0);
+  const [scannedOrderDetails, setScannedOrderDetails] = useState<Omit<
+    ScanDetailCardProps,
+    "visible"
+  > | null>(null);
 
   const onScan = async (scannedCode: any) => {
     if (scanned) return;
@@ -142,8 +142,9 @@ export default function RTSIncomingScreen() {
           }
 
           // Process return
+          const scanInstant = moment();
           const riderRtsItemPayload = {
-            scannedDate: moment().format("YYYY-MM-DD HH:mm:ss"),
+            scannedDate: scanInstant.format("YYYY-MM-DD HH:mm:ss"),
             origin: "Client",
             operationAccountId: userData.id,
             recipientDetailId: validationResponse.data.recipientDetailId,
@@ -174,9 +175,23 @@ export default function RTSIncomingScreen() {
           setAlertColor("green");
           setLoadingScan(false);
           setScanned(false);
+          setScannedOrderDetails({
+            waybillNumber: data.data,
+            parcelStatus: "Returned",
+            statusTone: "warning",
+            senderName: validationResponse.data.senderName,
+            receiverName: validationResponse.data.receiverName,
+            destination: formatDestination(
+              validationResponse.data.senderBarangay,
+              validationResponse.data.senderCity,
+              validationResponse.data.senderProvince,
+            ),
+            scanTime: formatScanTime(scanInstant),
+          });
           setTimeout(() => {
             setScanResultMessage("");
             setData("");
+            setScannedOrderDetails(null);
           }, 5000);
         } catch (error: any) {
           console.error("RTS RETURN SCANNING ERROR:", error);
@@ -234,30 +249,57 @@ export default function RTSIncomingScreen() {
     }
   }, [data, userData]);
 
-  const colors = ALERT_COLORS[alertColor] ?? ALERT_COLORS.green;
-
   return (
     <SafeAreaView style={styles.container}>
       {/* HEADER */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="chevron-back" size={24} color="#22c55e" />
-        </TouchableOpacity>
-        <View style={styles.headerTextContainer}>
-          <Text style={styles.title}>RTS Return</Text>
-          <Text style={styles.subtitle}>Return RTS items to clients</Text>
-        </View>
-        <View style={{ width: 40 }} />
-      </View>
+      <ScreenHeader
+        title="RTS Return"
+        subtitle="Return RTS items to clients"
+        icon={<Ionicons name="scan-outline" size={20} color="#00BF63" />}
+        onBack={() => router.back()}
+      />
+
+      <BarcodeScanner onScan={onScan} scanned={scanned} />
+
+      <ScanStatusBar
+        loading={loadingScan}
+        readyText={scanned ? "Camera Locked" : "Ready to Scan"}
+        processingText="Processing…"
+      />
+
+      <ScanResultAlert
+        visible={!!data}
+        loading={loadingScan}
+        color={alertColor}
+        message={scanResultMessage}
+        code={data?.data}
+        onRetry={
+          alertColor === "red"
+            ? () => {
+                setData("");
+                setScanResultMessage("");
+                setScanned(false);
+              }
+            : undefined
+        }
+      />
+
+      {scannedOrderDetails ? (
+        <ScanDetailCard visible {...scannedOrderDetails} />
+      ) : null}
+
+      {/* SCAN COUNT */}
+      <ScanStatsCard
+        icon={<Ionicons name="checkmark-done-circle" size={22} color="#00BF63" />}
+        label={totalScannedCount === 1 ? "Item Scanned" : "Items Scanned"}
+        value={totalScannedCount}
+      />
 
       {/* SOCKET TEST BUTTON */}
       <View style={{ alignItems: "center", marginVertical: 8 }}>
         <TouchableOpacity
           style={{
-            backgroundColor: "#22c55e",
+            backgroundColor: "#00BF63",
             paddingVertical: 8,
             paddingHorizontal: 20,
             borderRadius: 8,
@@ -267,169 +309,10 @@ export default function RTSIncomingScreen() {
           <Text style={{ color: "#fff", fontWeight: "bold" }}>Socket Test</Text>
         </TouchableOpacity>
       </View>
-
-      <BarcodeScanner onScan={onScan} scanned={scanned} />
-
-      {/* SCAN COUNT */}
-      <View style={styles.scanCountContainer}>
-        <View style={styles.scanCountCard}>
-          <Text style={styles.scanCountNumber}>{totalScannedCount}</Text>
-          <Text style={styles.scanCountLabel}>
-            {totalScannedCount === 1 ? "Item Scanned" : "Items Scanned"}
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.statusContainer}>
-        <View
-          style={[
-            styles.statusIndicator,
-            { backgroundColor: scanned ? "#ef4444" : "#22c55e" },
-          ]}
-        />
-        <Text style={styles.statusText}>
-          {loadingScan
-            ? "Processing..."
-            : scanned
-              ? "Camera Locked"
-              : "Ready to Scan"}
-        </Text>
-      </View>
-
-      {scanResultMessage && (
-        <View
-          style={[
-            styles.resultContainer,
-            alertColor === "green"
-              ? styles.successBg
-              : alertColor === "yellow"
-                ? styles.warningBg
-                : styles.errorBg,
-          ]}
-        >
-          <Ionicons
-            name={
-              alertColor === "green"
-                ? "checkmark-circle"
-                : alertColor === "yellow"
-                  ? "warning"
-                  : "close-circle"
-            }
-            size={24}
-            color={
-              alertColor === "green"
-                ? "#22c55e"
-                : alertColor === "yellow"
-                  ? "#f39c12"
-                  : "#e74c3c"
-            }
-          />
-          <Text
-            style={[
-              styles.resultText,
-              alertColor === "green"
-                ? styles.successColor
-                : alertColor === "yellow"
-                  ? styles.warningColor
-                  : styles.errorColor,
-            ]}
-          >
-            {scanResultMessage}
-          </Text>
-        </View>
-      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8FAFC" },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingTop: 10,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
-    backgroundColor: "#fff",
-  },
-  headerTextContainer: { flex: 1 },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 8,
-  },
-  title: { fontSize: 22, fontWeight: "700", color: "#2c3e50" },
-  subtitle: { fontSize: 13, color: "#7f8c8d", marginTop: 2 },
-  scannerContainer: {
-    flex: 1,
-    margin: 20,
-    borderRadius: 16,
-    overflow: "hidden",
-  },
-  statusContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 12,
-    marginHorizontal: 20,
-    marginBottom: 12,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-  },
-  statusIndicator: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },
-  statusText: { fontSize: 14, fontWeight: "600", color: "#2c3e50" },
-  resultContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginHorizontal: 20,
-    marginBottom: 12,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  errorBg: { backgroundColor: "#fee2e2", borderColor: "#ef4444" },
-  successBg: { backgroundColor: "#d1fae5", borderColor: "#22c55e" },
-  warningBg: { backgroundColor: "#fef3c7", borderColor: "#f59e0b" },
-  resultText: { flex: 1, fontSize: 14, fontWeight: "600", lineHeight: 20 },
-  errorColor: { color: "#dc2626" },
-  successColor: { color: "#16a34a" },
-  warningColor: { color: "#d97706" },
-  scanCountContainer: {
-    alignItems: "center",
-    marginTop: 12,
-    marginBottom: 4,
-  },
-  scanCountCard: {
-    backgroundColor: "#fff",
-    paddingVertical: 10,
-    paddingHorizontal: 32,
-    borderRadius: 14,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#D1FAE5",
-    shadowColor: "#22c55e",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  scanCountNumber: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: "#22c55e",
-  },
-  scanCountLabel: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#64748B",
-    marginTop: 2,
-  },
 });

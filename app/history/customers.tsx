@@ -2,6 +2,7 @@ import { useAppSelector } from "@/store/hooks";
 import axiosInstance from "@/utils/axiosInstance";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -42,7 +43,7 @@ export default function clientHistoryt() {
         activeOpacity={0.75}
       >
         <View style={styles.cardIconContainer}>
-          <Ionicons name="location" size={22} color="#22c55e" />
+          <Ionicons name="location" size={22} color="#00BF63" />
         </View>
         <View style={styles.cardContent}>
           <Text style={styles.cardTitle}>{item.barangay}</Text>
@@ -95,15 +96,23 @@ export default function clientHistoryt() {
   return (
     <SafeAreaView style={styles.container}>
       {/* GREEN HEADER */}
-      <View style={styles.headerSection}>
+      <LinearGradient
+        colors={["#00D673", "#00BF63", "#00994F"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.headerSection}
+      >
+        <View pointerEvents="none" style={styles.decorCircleLarge} />
+        <View pointerEvents="none" style={styles.decorCircleSmall} />
+
         <View style={styles.headerContent}>
           <View style={styles.headerIconContainer}>
             <Ionicons name="people" size={24} color="#fff" />
           </View>
           <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>Customers</Text>
+            <Text style={styles.headerTitle}>Delivered to Customer</Text>
             <Text style={styles.headerSubtitle}>
-              Pickup transactions per customer
+              Delivery transactions per customer
             </Text>
           </View>
           {data.length > 0 && (
@@ -112,11 +121,11 @@ export default function clientHistoryt() {
             </View>
           )}
         </View>
-      </View>
+      </LinearGradient>
 
       {dataLoading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#22c55e" />
+          <ActivityIndicator size="large" color="#00BF63" />
           <Text style={styles.loadingText}>Loading customers...</Text>
         </View>
       ) : (
@@ -132,7 +141,7 @@ export default function clientHistoryt() {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <View style={styles.emptyIconContainer}>
-                <Ionicons name="receipt-outline" size={36} color="#22c55e" />
+                <Ionicons name="receipt-outline" size={36} color="#00BF63" />
               </View>
               <Text style={styles.emptyText}>No Transactions Yet</Text>
               <Text style={styles.emptySubtext}>
@@ -150,15 +159,35 @@ export default function clientHistoryt() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8FAFC" },
   headerSection: {
-    backgroundColor: "#22c55e",
     paddingBottom: 24,
     paddingHorizontal: 20,
     paddingTop: 16,
-    shadowColor: "#16a34a",
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    overflow: "hidden",
+    shadowColor: "#00BF63",
     shadowOpacity: 0.3,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
     elevation: 6,
+  },
+  decorCircleLarge: {
+    position: "absolute",
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    top: -70,
+    right: -50,
+  },
+  decorCircleSmall: {
+    position: "absolute",
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: "rgba(255, 255, 255, 0.06)",
+    bottom: -30,
+    left: -20,
   },
   headerContent: {
     flexDirection: "row",
@@ -168,7 +197,7 @@ const styles = StyleSheet.create({
   headerIconContainer: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: 16,
     backgroundColor: "rgba(255, 255, 255, 0.2)",
     justifyContent: "center",
     alignItems: "center",
@@ -181,7 +210,7 @@ const styles = StyleSheet.create({
   },
   headerSubtitle: {
     fontSize: 13,
-    color: "#d1fae5",
+    color: "rgba(255, 255, 255, 0.8)",
     marginTop: 2,
   },
   headerBadge: {
@@ -219,7 +248,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: "#DCFCE7",
+    backgroundColor: "#00BF6315",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -241,7 +270,7 @@ const styles = StyleSheet.create({
   },
   cardCount: {
     fontSize: 12,
-    color: "#22c55e",
+    color: "#00BF63",
     fontWeight: "600",
   },
   loadingContainer: {
@@ -267,7 +296,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "#DCFCE7",
+    backgroundColor: "#00BF6315",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 16,

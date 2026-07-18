@@ -1,5 +1,10 @@
 import { BarcodeScanner } from "@/components/BarcodeScanner";
+import { DrawerHeader } from "@/components/DrawerHeader";
+import { ScanResultAlert } from "@/components/ScanResultAlert";
 import { useScannerSounds } from "@/components/ScannerSounds";
+import { ScanStatsCard } from "@/components/ScanStatsCard";
+import { ScanStatusBar } from "@/components/ScanStatusBar";
+import { ScreenHeader } from "@/components/ScreenHeader";
 import { useAppSelector } from "@/store/hooks";
 import axiosInstance from "@/utils/axiosInstance";
 import { Ionicons } from "@expo/vector-icons";
@@ -16,17 +21,18 @@ import {
   useWindowDimensions,
 } from "react-native";
 import BottomDrawer from "react-native-animated-bottom-drawer";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 type ClientData = any;
 const SheetItem = ({ label, value }: { label: string; value?: any }) => (
   <View style={{ marginBottom: 10 }}>
-    <Text style={{ fontSize: 12, color: "#6b7280" }}>{label}</Text>
+    <Text style={{ fontSize: 12, color: "#64748B" }}>{label}</Text>
     <Text style={{ fontSize: 14, fontWeight: "600" }}>{value ?? "-"}</Text>
   </View>
 );
 
 const Divider = () => (
-  <View style={{ height: 1, backgroundColor: "#e5e7eb", marginVertical: 12 }} />
+  <View style={{ height: 1, backgroundColor: "#F1F5F9", marginVertical: 12 }} />
 );
 
 export default function scanClientScheduledParcel() {
@@ -253,102 +259,47 @@ export default function scanClientScheduledParcel() {
   const drawerScrollHeight = height * 0.75 - 60;
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      {/* HEADER */}
+      <ScreenHeader
+        title="Scan Scheduled Pickup"
+        subtitle="Scan a QR Code or Barcode to confirm pickup"
+        icon={<Ionicons name="scan-outline" size={20} color="#00BF63" />}
+        onBack={() => router.back()}
+      />
+
       {/* CAMERA */}
       <BarcodeScanner onScan={onScan} scanned={scanned} />
 
       {/* SCANNING STATUS */}
-      <View style={styles.statusContainer}>
-        <View
-          style={[
-            styles.statusIndicator,
-            { backgroundColor: scanned ? "#ef4444" : "#22c55e" },
-          ]}
-        />
-        <Text style={styles.statusText}>
-          {loadingScan
-            ? "Processing..."
-            : scanned
-              ? "Camera Locked"
-              : "Ready to Scan"}
-        </Text>
-      </View>
+      <ScanStatusBar
+        loading={loadingScan}
+        readyText={scanned ? "Camera Locked" : "Ready to Scan"}
+        processingText="Processing…"
+      />
 
-      <View
-        style={{
-          padding: 20,
-          elevation: 4,
-          backgroundColor: "white",
-          flexDirection: "column",
-          alignItems: "center",
-          borderRadius: 16,
-          marginTop: 20,
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 4,
-        }}
-      >
-        <Text
-          style={{
-            fontSize: 20,
-            fontWeight: "600",
-            color: "#2c3e50",
-            marginBottom: 4,
-          }}
-        >
-          Items Remaining
-        </Text>
-        <Text style={{ fontSize: 32, fontWeight: "700", color: "#22c55e" }}>
-          {totalPendingCount}
-        </Text>
-        <Text style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>
-          {scannedData.length} scanned
-        </Text>
-      </View>
+      <ScanResultAlert
+        visible={!!scanResultMessage}
+        color={alertColor}
+        message={scanResultMessage}
+        code={data?.data}
+        onRetry={
+          alertColor === "red"
+            ? () => {
+                setData("");
+                setScanResultMessage("");
+                setScanned(false);
+              }
+            : undefined
+        }
+      />
 
-      {scanResultMessage && (
-        <View
-          style={[
-            styles.resultAlert,
-            alertColor === "green"
-              ? styles.successAlert
-              : alertColor === "yellow"
-                ? styles.warningAlert
-                : styles.errorAlert,
-          ]}
-        >
-          <Ionicons
-            name={
-              alertColor === "green"
-                ? "checkmark-circle"
-                : alertColor === "yellow"
-                  ? "warning"
-                  : "close-circle"
-            }
-            size={24}
-            color={
-              alertColor === "green"
-                ? "#22c55e"
-                : alertColor === "yellow"
-                  ? "#f59e0b"
-                  : "#ef4444"
-            }
-          />
-          <Text
-            style={[
-              styles.resultText,
-              alertColor === "green"
-                ? { color: "#16a34a" }
-                : alertColor === "yellow"
-                  ? { color: "#d97706" }
-                  : { color: "#dc2626" },
-            ]}
-          >
-            {scanResultMessage}
-          </Text>
-        </View>
-      )}
+      <ScanStatsCard
+        icon={<Ionicons name="layers-outline" size={22} color="#00BF63" />}
+        label="Items Remaining"
+        value={totalPendingCount}
+        subtext={`${scannedData.length} scanned`}
+      />
 
       <BottomDrawer
         ref={bottomDrawerRef}
@@ -360,7 +311,7 @@ export default function scanClientScheduledParcel() {
             backgroundColor: "#fff",
             borderTopLeftRadius: 24,
             borderTopRightRadius: 24,
-            shadowColor: "#000",
+            shadowColor: "#0F172A",
             shadowOffset: { width: 0, height: -2 },
             shadowOpacity: 0.15,
             shadowRadius: 8,
@@ -378,15 +329,13 @@ export default function scanClientScheduledParcel() {
         }}
       >
         {/* FIXED HEADER */}
-        <View style={styles.drawerHeader}>
-          <Text style={styles.drawerHeaderTitle}>Scan Details</Text>
-          <TouchableOpacity
-            onPress={bottomDrawerClose}
-            style={styles.closeButton}
-          >
-            <Ionicons name="close-circle" size={28} color="#6b7280" />
-          </TouchableOpacity>
-        </View>
+        <DrawerHeader
+          title="Scan Details"
+          subtitle={selectedItem?.waybillNumber}
+          icon={<Ionicons name="document-text" size={22} color="#00BF63" />}
+          onClose={bottomDrawerClose}
+          showHandle={false}
+        />
 
         {/* SCROLLABLE AREA */}
         <ScrollView
@@ -396,12 +345,6 @@ export default function scanClientScheduledParcel() {
           style={{ flex: 1 }}
           contentContainerStyle={styles.drawerContent}
         >
-          {scanResultMessage && (
-            <View style={styles.successBanner}>
-              <Text style={styles.successBannerText}>{scanResultMessage}</Text>
-            </View>
-          )}
-
           {selectedItem && (
             <View>
               <View style={styles.items}>
@@ -476,101 +419,14 @@ export default function scanClientScheduledParcel() {
           )}
         </ScrollView>
       </BottomDrawer>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    marginTop: 30,
-    padding: 15,
-  },
-  card: {
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: "#ffffff",
-    flexDirection: "row",
-    alignItems: "center",
-    elevation: 2,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    marginRight: -10,
-  },
-  title: {
-    fontSize: 15,
-    fontWeight: "bold",
-    color: "#4ade80",
-  },
-  subtitle: {
-    fontSize: 16,
-    opacity: 0.7,
-    marginBottom: 30,
-  },
-  content: {
-    marginTop: 40,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  description: {
-    fontSize: 16,
-    textAlign: "center",
-    marginTop: 20,
-    opacity: 0.8,
-  },
-  statusContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 12,
-    paddingVertical: 8,
-  },
-  statusIndicator: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 8,
-  },
-  statusText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
-  },
-  resultAlert: {
-    marginTop: 20,
-    marginHorizontal: 12,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  successAlert: {
-    backgroundColor: "#d1fae5",
-    borderColor: "#22c55e",
-  },
-  warningAlert: {
-    backgroundColor: "#fef3c7",
-    borderColor: "#f59e0b",
-  },
-  errorAlert: {
-    backgroundColor: "#fee2e2",
-    borderColor: "#ef4444",
-  },
-  resultText: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: "600",
-    lineHeight: 20,
+    backgroundColor: "#F8FAFC",
   },
   items: {
     flexDirection: "row",
@@ -578,31 +434,12 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 10,
   },
-  drawerHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
-    backgroundColor: "#fff",
-  },
-  drawerHeaderTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#2c3e50",
-  },
-  closeButton: {
-    padding: 4,
-  },
   drawerContent: {
     padding: 20,
     paddingBottom: 80,
   },
   successBanner: {
-    backgroundColor: "#22c55e",
+    backgroundColor: "#00BF63",
     padding: 16,
     borderRadius: 8,
     marginBottom: 16,

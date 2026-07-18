@@ -1,9 +1,36 @@
-import { useRouter } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { DashboardHeader } from "@/components/DashboardHeader";
+import { InboundListItemCard } from "@/components/InboundListItemCard";
+import { SectionHeader } from "@/components/SectionHeader";
+import { useAppSelector } from "@/store/hooks";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
+import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function HistoryScreen() {
   const router = useRouter();
+  const user = useAppSelector((state: any) => state.user.user);
+  const [userData, setUserData] = useState<any>(null);
+
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        const storedUser = await AsyncStorage.getItem("user");
+        if (storedUser) {
+          setUserData(JSON.parse(storedUser));
+        } else if (user) {
+          setUserData(user);
+        }
+      } catch (error) {
+        console.error("Error loading user data:", error);
+      }
+    };
+
+    loadUserData();
+  }, [user]);
+
   const handlePress = (type: "clients" | "customers") => {
     if (type === "clients") {
       router.push({
@@ -16,139 +43,68 @@ export default function HistoryScreen() {
     }
   };
 
+  const roleLabel =
+    userData?.accountType === 1 ? "Hub Rider" : "Store Rider";
+  const locationLabel =
+    [userData?.storeCity, userData?.storeProvince].filter(Boolean).join(", ") ||
+    "Location not set";
+
   return (
-    <View style={styles.container}>
-      <View style={styles.headerSection}>
-        <View style={styles.headerContent}>
-          <View style={styles.headerIconContainer}>
-            <Ionicons name="time" size={24} color="#fff" />
+    <SafeAreaView style={styles.safeArea} edges={["left", "right"]}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <DashboardHeader
+          eyebrow="HISTORY"
+          username={userData?.name || "Rider"}
+          role={roleLabel}
+          location={locationLabel}
+        />
+
+        <View style={styles.container}>
+          <View style={styles.sectionHeaderWrapper}>
+            <SectionHeader
+              title="Browse By"
+              accentColor="#00BF63"
+              icon={<Ionicons name="list" size={18} color="#00BF63" />}
+            />
           </View>
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>History</Text>
-            <Text style={styles.headerSubtitle}>
-              Your transaction and activity history
-            </Text>
-          </View>
+
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => handlePress("clients")}
+          >
+            <InboundListItemCard
+              icon={<Ionicons name="checkmark-done-circle" size={20} color="#00BF63" />}
+              title="Picked-up"
+              subtitle="View your pickup history from hub and clients"
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => handlePress("customers")}
+          >
+            <InboundListItemCard
+              icon={<Ionicons name="people" size={20} color="#00BF63" />}
+              title="Delivered to Customer"
+              subtitle="View your delivery history to customers"
+            />
+          </TouchableOpacity>
         </View>
-      </View>
-
-      <View style={styles.cardsContainer}>
-        {/* Clients Card */}
-        <Pressable
-          style={({ pressed }) => [
-            styles.card,
-            pressed && styles.cardPressed,
-          ]}
-          onPress={() => handlePress("clients")}
-        >
-          <View style={styles.cardIconContainer}>
-            <Ionicons name="business" size={32} color="#22c55e" />
-          </View>
-          <View style={styles.cardContent}>
-            <Text style={styles.cardTitle}>Clients</Text>
-            <Text style={styles.cardDesc}>
-              View transaction history from clients
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={24} color="#bdc3c7" />
-        </Pressable>
-
-        {/* Customers Card */}
-        <Pressable
-          style={({ pressed }) => [
-            styles.card,
-            pressed && styles.cardPressed,
-          ]}
-          onPress={() => handlePress("customers")}
-        >
-          <View style={styles.cardIconContainer}>
-            <Ionicons name="people" size={32} color="#22c55e" />
-          </View>
-          <View style={styles.cardContent}>
-            <Text style={styles.cardTitle}>Customers</Text>
-            <Text style={styles.cardDesc}>
-              View transaction history from customers
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={24} color="#bdc3c7" />
-        </Pressable>
-      </View>
-    </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#F8FAFC",
+  },
   container: {
-    flex: 1,
-    backgroundColor: "#f5f7fa",
+    paddingTop: 20,
+    paddingBottom: 32,
   },
-  headerSection: {
-    backgroundColor: "#22c55e",
-    paddingTop: 50,
-    paddingBottom: 24,
-    paddingHorizontal: 20,
-  },
-  headerContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-  },
-  headerIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  headerTextContainer: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#fff",
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: "#d1fae5",
-    marginTop: 2,
-  },
-  cardsContainer: {
-    padding: 20,
-    gap: 16,
-  },
-  card: {
-    backgroundColor: "#fff",
-    padding: 20,
-    borderRadius: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-  },
-  cardPressed: {
-    transform: [{ scale: 0.98 }],
-  },
-  cardIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#f8f9fa",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  cardContent: {
-    flex: 1,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#2c3e50",
-    marginBottom: 4,
-  },
-  cardDesc: {
-    fontSize: 14,
-    color: "#7f8c8d",
-    lineHeight: 20,
+  sectionHeaderWrapper: {
+    marginHorizontal: 12,
   },
 });

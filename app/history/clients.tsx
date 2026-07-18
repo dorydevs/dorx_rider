@@ -13,7 +13,19 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { SafeAreaView } from "react-native-safe-area-context";
+
 type clientHistoryData = any;
+type PickupSection = "hub" | "clients";
+type PickupFilter = "all" | "picked-up" | "dropped-off";
+
+const FILTERS: { key: PickupFilter; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "picked-up", label: "Picked up" },
+  { key: "dropped-off", label: "Dropped off" },
+];
+
 export default function clientHistoryt() {
   const { width } = useWindowDimensions();
   const user = useAppSelector((state: any) => state.user.user);
@@ -21,12 +33,15 @@ export default function clientHistoryt() {
   const router = useRouter();
   const [data, setData] = useState<clientHistoryData[]>([]);
   const [dataLoading, setDataLoading] = useState(false);
+  const [activeSection, setActiveSection] = useState<PickupSection>("clients");
+  const [activeFilter, setActiveFilter] = useState<PickupFilter>("all");
 
   const handlePress = (item: clientHistoryData) => {
     router.push({
       pathname: "/history/components/clientHistory",
       params: {
         clientData: JSON.stringify(item),
+        filter: activeFilter,
       },
     });
   };
@@ -39,22 +54,22 @@ export default function clientHistoryt() {
         activeOpacity={0.7}
       >
         <View style={styles.cardIconContainer}>
-          <Ionicons name="business" size={22} color="#22c55e" />
+          <Ionicons name="business" size={22} color="#00BF63" />
         </View>
         <View style={styles.cardContent}>
           <Text style={styles.cardTitle}>{item.clientName}</Text>
           <View style={styles.cardDetailRow}>
-            <Ionicons name="location-outline" size={14} color="#7f8c8d" />
+            <Ionicons name="location-outline" size={14} color="#64748B" />
             <Text style={styles.cardAddress}>{item.address}</Text>
           </View>
           <View style={styles.cardDetailRow}>
-            <Ionicons name="cube-outline" size={14} color="#7f8c8d" />
+            <Ionicons name="cube-outline" size={14} color="#64748B" />
             <Text style={styles.cardCount}>
               {item.totalPickedUp} {item.totalPickedUp === 1 ? 'parcel' : 'parcels'} picked up
             </Text>
           </View>
         </View>
-        <Ionicons name="chevron-forward" size={20} color="#bdc3c7" />
+        <Ionicons name="chevron-forward" size={20} color="#94A3B8" />
       </TouchableOpacity>
     );
   };
@@ -91,22 +106,91 @@ export default function clientHistoryt() {
   }, [userData]);
 
   return (
-    <View style={styles.container}>
-      <View style={styles.headerSection}>
+    <SafeAreaView style={styles.container}>
+      <LinearGradient
+        colors={["#00D673", "#00BF63", "#00994F"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.headerSection}
+      >
+        <View pointerEvents="none" style={styles.decorCircleLarge} />
+        <View pointerEvents="none" style={styles.decorCircleSmall} />
+
         <View style={styles.headerContent}>
           <View style={styles.headerIconContainer}>
-            <Ionicons name="people" size={24} color="#fff" />
+            <Ionicons name="checkmark-done-circle" size={24} color="#fff" />
           </View>
           <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>Clients</Text>
-            
+            <Text style={styles.headerTitle}>Picked-up</Text>
+            <Text style={styles.headerSubtitle}>
+              Your pickup history from hub and clients
+            </Text>
           </View>
+          {data.length > 0 && (
+            <View style={styles.headerBadge}>
+              <Text style={styles.headerBadgeText}>{data.length}</Text>
+            </View>
+          )}
         </View>
+      </LinearGradient>
+
+      <View style={styles.sectionTabs}>
+        {(["clients", "hub"] as PickupSection[]).map((section) => (
+          <TouchableOpacity
+            key={section}
+            style={[
+              styles.sectionTab,
+              activeSection === section && styles.sectionTabActive,
+            ]}
+            activeOpacity={0.8}
+            onPress={() => setActiveSection(section)}
+          >
+            <Text
+              style={[
+                styles.sectionTabText,
+                activeSection === section && styles.sectionTabTextActive,
+              ]}
+            >
+              {section === "hub" ? "Pick up in Hub" : "Pick up in Clients"}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
-      {dataLoading ? (
+      <View style={styles.filterRow}>
+        {FILTERS.map((filter) => (
+          <TouchableOpacity
+            key={filter.key}
+            style={[
+              styles.filterChip,
+              activeFilter === filter.key && styles.filterChipActive,
+            ]}
+            activeOpacity={0.8}
+            onPress={() => setActiveFilter(filter.key)}
+          >
+            <Text
+              style={[
+                styles.filterChipText,
+                activeFilter === filter.key && styles.filterChipTextActive,
+              ]}
+            >
+              {filter.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {activeSection === "hub" ? (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="business-outline" size={48} color="#94A3B8" />
+          <Text style={styles.emptyText}>Hub pickup history coming soon</Text>
+          <Text style={styles.emptySubtext}>
+            Parcels you pick up from the hub will appear here.
+          </Text>
+        </View>
+      ) : dataLoading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#22c55e" />
+          <ActivityIndicator size="large" color="#00BF63" />
           <Text style={styles.loadingText}>Loading clients...</Text>
         </View>
       ) : (
@@ -120,31 +204,51 @@ export default function clientHistoryt() {
           ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Ionicons name="business-outline" size={48} color="#bdc3c7" />
+              <Ionicons name="business-outline" size={48} color="#94A3B8" />
               <Text style={styles.emptyText}>No clients found</Text>
               <Text style={styles.emptySubtext}>Clients will appear here once you start picking up parcels</Text>
             </View>
           }
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f7fa",
+    backgroundColor: "#F8FAFC",
   },
   headerSection: {
-    backgroundColor: "#22c55e",
-    paddingTop: 50,
+    paddingTop: 16,
     paddingBottom: 24,
     paddingHorizontal: 20,
-    shadowColor: "#22c55e",
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    overflow: "hidden",
+    shadowColor: "#00BF63",
     shadowOpacity: 0.3,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
     elevation: 6,
+  },
+  decorCircleLarge: {
+    position: "absolute",
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    top: -70,
+    right: -50,
+  },
+  decorCircleSmall: {
+    position: "absolute",
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: "rgba(255, 255, 255, 0.06)",
+    bottom: -30,
+    left: -20,
   },
   headerContent: {
     flexDirection: "row",
@@ -154,7 +258,7 @@ const styles = StyleSheet.create({
   headerIconContainer: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: 16,
     backgroundColor: "rgba(255, 255, 255, 0.2)",
     justifyContent: "center",
     alignItems: "center",
@@ -168,9 +272,78 @@ const styles = StyleSheet.create({
     color: "#fff",
   },
   headerSubtitle: {
-    fontSize: 14,
-    color: "#d1fae5",
+    fontSize: 13,
+    color: "rgba(255, 255, 255, 0.8)",
     marginTop: 2,
+  },
+  headerBadge: {
+    backgroundColor: "rgba(255,255,255,0.25)",
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  headerBadgeText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  sectionTabs: {
+    flexDirection: "row",
+    backgroundColor: "#F1F5F9",
+    borderRadius: 12,
+    padding: 4,
+    marginHorizontal: 20,
+    marginTop: 16,
+    gap: 4,
+  },
+  sectionTab: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 9,
+    alignItems: "center",
+  },
+  sectionTabActive: {
+    backgroundColor: "#00BF63",
+    shadowColor: "#00BF63",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  sectionTabText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#64748B",
+  },
+  sectionTabTextActive: {
+    color: "#fff",
+    fontWeight: "700",
+  },
+  filterRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginHorizontal: 20,
+    marginTop: 12,
+  },
+  filterChip: {
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
+  },
+  filterChipActive: {
+    backgroundColor: "#00BF6315",
+    borderColor: "#00BF63",
+  },
+  filterChipText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#64748B",
+  },
+  filterChipTextActive: {
+    color: "#00BF63",
   },
   listContent: {
     padding: 20,
@@ -183,7 +356,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    shadowColor: "#000",
+    shadowColor: "#0F172A",
     shadowOpacity: 0.05,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
@@ -193,7 +366,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#dcfce7",
+    backgroundColor: "#00BF6315",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -204,7 +377,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#2c3e50",
+    color: "#0F172A",
   },
   cardDetailRow: {
     flexDirection: "row",
@@ -213,12 +386,12 @@ const styles = StyleSheet.create({
   },
   cardAddress: {
     fontSize: 13,
-    color: "#7f8c8d",
+    color: "#64748B",
     flex: 1,
   },
   cardCount: {
     fontSize: 12,
-    color: "#7f8c8d",
+    color: "#64748B",
     fontWeight: "500",
   },
   loadingContainer: {
@@ -230,7 +403,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: "#7f8c8d",
+    color: "#64748B",
   },
   emptyContainer: {
     padding: 40,
@@ -241,25 +414,19 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 16,
     fontWeight: "600",
-    color: "#7f8c8d",
+    color: "#64748B",
   },
   emptySubtext: {
     marginTop: 8,
     fontSize: 14,
-    color: "#95a5a6",
+    color: "#64748B",
     textAlign: "center",
     paddingHorizontal: 20,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    marginRight: -10,
   },
   title: {
     fontSize: 28,
     fontWeight: "bold",
-    color: "#4ade80",
+    color: "#00BF63",
   },
   subtitle: {
     fontSize: 16,
